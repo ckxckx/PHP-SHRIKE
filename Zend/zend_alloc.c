@@ -2402,6 +2402,8 @@ ZEND_API void ZEND_FASTCALL _efree_huge(void *ptr, size_t size)
 }
 #endif
 
+extern int shrike_logging_enabled;
+
 ZEND_API void* ZEND_FASTCALL _emalloc(size_t size ZEND_FILE_LINE_DC ZEND_FILE_LINE_ORIG_DC)
 {
 
@@ -2414,7 +2416,12 @@ ZEND_API void* ZEND_FASTCALL _emalloc(size_t size ZEND_FILE_LINE_DC ZEND_FILE_LI
 		}
 	}
 #endif
-	return zend_mm_alloc_heap(AG(mm_heap), size ZEND_FILE_LINE_RELAY_CC ZEND_FILE_LINE_ORIG_RELAY_CC);
+        void *p = zend_mm_alloc_heap(AG(mm_heap), size ZEND_FILE_LINE_RELAY_CC ZEND_FILE_LINE_ORIG_RELAY_CC);
+        if (shrike_logging_enabled) {
+            printf("vtx alloc %lu 0x%" PRIxPTR "\n", size, (uintptr_t) p);
+        }
+        return p;
+
 }
 
 ZEND_API void ZEND_FASTCALL _efree(void *ptr ZEND_FILE_LINE_DC ZEND_FILE_LINE_ORIG_DC)
@@ -2430,6 +2437,9 @@ ZEND_API void ZEND_FASTCALL _efree(void *ptr ZEND_FILE_LINE_DC ZEND_FILE_LINE_OR
 		return;
 	}
 #endif
+        if (shrike_logging_enabled) {
+            printf("vtx free 0x%" PRIxPTR "\n", (uintptr_t) ptr);
+        }
 	zend_mm_free_heap(AG(mm_heap), ptr ZEND_FILE_LINE_RELAY_CC ZEND_FILE_LINE_ORIG_RELAY_CC);
 }
 
@@ -2443,7 +2453,11 @@ ZEND_API void* ZEND_FASTCALL _erealloc(void *ptr, size_t size ZEND_FILE_LINE_DC 
 			return AG(mm_heap)->custom_heap.std._realloc(ptr, size);
 		}
 	}
-	return zend_mm_realloc_heap(AG(mm_heap), ptr, size, size ZEND_FILE_LINE_RELAY_CC ZEND_FILE_LINE_ORIG_RELAY_CC);
+        void *p = zend_mm_realloc_heap(AG(mm_heap), ptr, size, size ZEND_FILE_LINE_RELAY_CC ZEND_FILE_LINE_ORIG_RELAY_CC);
+        if (shrike_logging_enabled) {
+            printf("vtx realloc %lu 0x%" PRIxPTR "\n", size, (uintptr_t) p);
+        }
+        return p;
 }
 
 ZEND_API void* ZEND_FASTCALL _erealloc2(void *ptr, size_t size, size_t copy_size ZEND_FILE_LINE_DC ZEND_FILE_LINE_ORIG_DC)
@@ -2491,8 +2505,15 @@ ZEND_API void* ZEND_FASTCALL _safe_realloc(void *ptr, size_t nmemb, size_t size,
 ZEND_API void* ZEND_FASTCALL _ecalloc(size_t nmemb, size_t size ZEND_FILE_LINE_DC ZEND_FILE_LINE_ORIG_DC)
 {
 	void *p;
+        int tmp = shrike_logging_enabled;
 
+        shrike_logging_enabled = 0;
 	p = _safe_emalloc(nmemb, size, 0 ZEND_FILE_LINE_RELAY_CC ZEND_FILE_LINE_ORIG_RELAY_CC);
+        shrike_logging_enabled = tmp;
+
+        if (shrike_logging_enabled) {
+            printf("vtx calloc %lu 0x%" PRIxPTR "\n", size * nmemb, (uintptr_t) p);
+        }
 	if (UNEXPECTED(p == NULL)) {
 		return p;
 	}
