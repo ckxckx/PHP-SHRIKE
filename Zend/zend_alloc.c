@@ -2403,6 +2403,10 @@ ZEND_API void ZEND_FASTCALL _efree_huge(void *ptr, size_t size)
 #endif
 
 extern int shrike_logging_enabled;
+extern int shrike_pointer_logging_enabled;
+extern void *shrike_allocated_pointers[];
+extern size_t shrike_allocated_sizes[];
+extern size_t next_ptr_idx, shrike_allocated_pointers_idx;
 
 ZEND_API void* ZEND_FASTCALL _emalloc(size_t size ZEND_FILE_LINE_DC ZEND_FILE_LINE_ORIG_DC)
 {
@@ -2420,6 +2424,14 @@ ZEND_API void* ZEND_FASTCALL _emalloc(size_t size ZEND_FILE_LINE_DC ZEND_FILE_LI
         if (shrike_logging_enabled) {
             printf("vtx alloc %lu 0x%" PRIxPTR "\n", size, (uintptr_t) p);
         }
+
+        if (shrike_pointer_logging_enabled) {
+            memset(p, 0x0, size);
+            shrike_allocated_pointers[shrike_allocated_pointers_idx] = p;
+            shrike_allocated_sizes[shrike_allocated_pointers_idx] = size;
+            shrike_allocated_pointers_idx += 1;
+        }
+
         return p;
 
 }
@@ -2440,6 +2452,16 @@ ZEND_API void ZEND_FASTCALL _efree(void *ptr ZEND_FILE_LINE_DC ZEND_FILE_LINE_OR
         if (shrike_logging_enabled) {
             printf("vtx free 0x%" PRIxPTR "\n", (uintptr_t) ptr);
         }
+
+        if (shrike_pointer_logging_enabled) {
+            for (size_t i = 0; i < shrike_allocated_pointers_idx; ++i) {
+                if (ptr == shrike_allocated_pointers[i]) {
+                    shrike_allocated_pointers[i] = NULL;
+                    break;
+                }
+            }
+        }
+
 	zend_mm_free_heap(AG(mm_heap), ptr ZEND_FILE_LINE_RELAY_CC ZEND_FILE_LINE_ORIG_RELAY_CC);
 }
 
@@ -2455,8 +2477,26 @@ ZEND_API void* ZEND_FASTCALL _erealloc(void *ptr, size_t size ZEND_FILE_LINE_DC 
 	}
         void *p = zend_mm_realloc_heap(AG(mm_heap), ptr, size, size ZEND_FILE_LINE_RELAY_CC ZEND_FILE_LINE_ORIG_RELAY_CC);
         if (shrike_logging_enabled) {
-            printf("vtx realloc %lu 0x%" PRIxPTR "\n", size, (uintptr_t) p);
+            printf("vtx realloc %lu 0x%" PRIxPTR " 0x%" PRIxPTR "\n", size, (uintptr_t) ptr, (uintptr_t) p);
         }
+
+        if (shrike_pointer_logging_enabled) {
+            for (size_t i = 0; i < shrike_allocated_pointers_idx; ++i) {
+                if (ptr == shrike_allocated_pointers[i]) {
+                    shrike_allocated_pointers[i] = NULL;
+                    break;
+                }
+            }
+
+            if (!ptr) {
+                memset(p, 0x0, size);
+            }
+
+            shrike_allocated_pointers[shrike_allocated_pointers_idx] = p;
+            shrike_allocated_sizes[shrike_allocated_pointers_idx] = size;
+            shrike_allocated_pointers_idx += 1;
+        }
+
         return p;
 }
 
@@ -2514,7 +2554,14 @@ ZEND_API void* ZEND_FASTCALL _ecalloc(size_t nmemb, size_t size ZEND_FILE_LINE_D
         if (shrike_logging_enabled) {
             printf("vtx calloc %lu 0x%" PRIxPTR "\n", size * nmemb, (uintptr_t) p);
         }
-	if (UNEXPECTED(p == NULL)) {
+
+        if (shrike_pointer_logging_enabled) {
+            shrike_allocated_pointers[shrike_allocated_pointers_idx] = p;
+            shrike_allocated_sizes[shrike_allocated_pointers_idx] = size;
+            shrike_allocated_pointers_idx += 1;
+        }
+
+        if (UNEXPECTED(p == NULL)) {
 		return p;
 	}
 	memset(p, 0, size * nmemb);
