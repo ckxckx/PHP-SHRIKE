@@ -731,7 +731,8 @@ void _xml_startElementHandler(void *userData, const XML_Char *name, const XML_Ch
 
 		if (!Z_ISUNDEF(parser->startElementHandler)) {
 			ZVAL_COPY(&args[0], &parser->index);
-			ZVAL_STRING(&args[1], SKIP_TAGSTART(ZSTR_VAL(tag_name)));
+			//ZVAL_STRING(&args[1], SKIP_TAGSTART(ZSTR_VAL(tag_name)));
+			ZVAL_STRING(&args[1], ZSTR_VAL(tag_name) + parser->toffset);
 			array_init(&args[2]);
 
 			while (attributes && *attributes) {
@@ -1605,10 +1606,12 @@ PHP_FUNCTION(xml_parser_set_option)
 		case PHP_XML_OPTION_SKIP_TAGSTART:
 			convert_to_long_ex(val);
 			parser->toffset = Z_LVAL_P(val);
+            /*
 			if (parser->toffset < 0) {
 				php_error_docref(NULL, E_NOTICE, "tagstart ignored, because it is out of range");
 				parser->toffset = 0;
 			}
+            */
 			break;
 		case PHP_XML_OPTION_SKIP_WHITE:
 			convert_to_long_ex(val);
