@@ -2476,7 +2476,8 @@ ZEND_API void ZEND_FASTCALL _efree(void *ptr ZEND_FILE_LINE_DC ZEND_FILE_LINE_OR
         }
 
         if (shrike_pointer_logging_enabled) {
-            for (size_t i = 0; i < shrike_allocated_pointers_idx; ++i) {
+            size_t i;
+            for (i = 0; i < shrike_allocated_pointers_idx; ++i) {
                 if (ptr == shrike_allocated_pointers[i]) {
                     shrike_allocated_pointers[i] = NULL;
                     break;
@@ -2503,7 +2504,8 @@ ZEND_API void* ZEND_FASTCALL _erealloc(void *ptr, size_t size ZEND_FILE_LINE_DC 
         }
 
         if (shrike_pointer_logging_enabled) {
-            for (size_t i = 0; i < shrike_allocated_pointers_idx; ++i) {
+            size_t i;
+            for (i = 0; i < shrike_allocated_pointers_idx; ++i) {
                 if (ptr == shrike_allocated_pointers[i]) {
                     shrike_allocated_pointers[i] = NULL;
                     break;
