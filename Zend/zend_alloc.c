@@ -2569,11 +2569,13 @@ ZEND_API void* ZEND_FASTCALL _safe_realloc(void *ptr, size_t nmemb, size_t size,
 ZEND_API void* ZEND_FASTCALL _ecalloc(size_t nmemb, size_t size ZEND_FILE_LINE_DC ZEND_FILE_LINE_ORIG_DC)
 {
 	void *p;
-        int tmp = shrike_logging_enabled;
+        int tmp1 = shrike_logging_enabled;
+        int tmp2 = shrike_pointer_logging_enabled;
 
-        shrike_logging_enabled = 0;
+        shrike_logging_enabled = shrike_pointer_logging_enabled = 0;
 	p = _safe_emalloc(nmemb, size, 0 ZEND_FILE_LINE_RELAY_CC ZEND_FILE_LINE_ORIG_RELAY_CC);
-        shrike_logging_enabled = tmp;
+        shrike_logging_enabled = tmp1;
+        shrike_pointer_logging_enabled = tmp2;
 
         if (shrike_logging_enabled) {
             printf("vtx calloc %lu 0x%" PRIxPTR "\n", size * nmemb, (uintptr_t) p);
