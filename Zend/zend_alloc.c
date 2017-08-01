@@ -2426,7 +2426,7 @@ ZEND_API void* ZEND_FASTCALL _emalloc(size_t size ZEND_FILE_LINE_DC ZEND_FILE_LI
 	}
 #endif
         void *p = zend_mm_alloc_heap(AG(mm_heap), size ZEND_FILE_LINE_RELAY_CC ZEND_FILE_LINE_ORIG_RELAY_CC);
-        if (shrike_logging_enabled) {
+        if (shrike_logging_enabled || getenv("VTX_LOG")) {
             printf("vtx alloc %lu 0x%" PRIxPTR "\n", size, (uintptr_t) p);
         }
 
@@ -2471,7 +2471,7 @@ ZEND_API void ZEND_FASTCALL _efree(void *ptr ZEND_FILE_LINE_DC ZEND_FILE_LINE_OR
 		return;
 	}
 #endif
-        if (shrike_logging_enabled) {
+        if (shrike_logging_enabled || getenv("VTX_LOG")) {
             printf("vtx free 0x%" PRIxPTR "\n", (uintptr_t) ptr);
         }
 
@@ -2499,7 +2499,7 @@ ZEND_API void* ZEND_FASTCALL _erealloc(void *ptr, size_t size ZEND_FILE_LINE_DC 
 		}
 	}
         void *p = zend_mm_realloc_heap(AG(mm_heap), ptr, size, size ZEND_FILE_LINE_RELAY_CC ZEND_FILE_LINE_ORIG_RELAY_CC);
-        if (shrike_logging_enabled) {
+        if (shrike_logging_enabled || getenv("VTX_LOG")) {
             printf("vtx realloc %lu 0x%" PRIxPTR " 0x%" PRIxPTR "\n", size, (uintptr_t) ptr, (uintptr_t) p);
         }
 
