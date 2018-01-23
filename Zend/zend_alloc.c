@@ -2521,6 +2521,23 @@ ZEND_API void* ZEND_FASTCALL _erealloc(void *ptr, size_t size ZEND_FILE_LINE_DC 
             shrike_allocated_pointers_idx += 1;
         }
 
+        if (shrike_destination_recording_enabled) {
+            if (shrike_current_index == shrike_destination_index) {
+                printf("vtx dst %lu 0x%" PRIxPTR "\n", size, (uintptr_t) p);
+                shrike_destination_recording_enabled = 0;
+            }
+
+            shrike_current_index++;
+        }
+
+        if (shrike_source_recording_enabled) {
+            if (shrike_current_index == shrike_source_index) {
+                printf("vtx src %lu 0x%" PRIxPTR "\n", size, (uintptr_t) p);
+            }
+
+            shrike_current_index++;
+        }
+
         return p;
 }
 
