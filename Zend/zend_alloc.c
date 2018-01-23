@@ -2299,7 +2299,7 @@ ZEND_API int is_zend_mm(void)
 #endif
 }
 
-#if !ZEND_DEBUG && defined(HAVE_BUILTIN_CONSTANT_P)
+#if !ZEND_DEBUG && defined(HAVE_BUILTIN_CONSTANT_P) && defined(DEFINITELY_NOT_DEFINED)
 #undef _emalloc
 
 #if ZEND_MM_CUSTOM
