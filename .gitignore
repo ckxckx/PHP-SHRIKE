@@ -1,3 +1,9 @@
+install/
+install-debug
+install-asan-debug
+tags
+cscope.out
+
 # General Ignores
 *~
 .#*
