@@ -1539,11 +1539,11 @@ PHP_FUNCTION(imagetruecolortopalette)
 		RETURN_FALSE;
 	}
 
-	if (ncolors <= 0 || ZEND_LONG_INT_OVFL(ncolors)) {
+	if (ncolors <= 0) {
 		php_error_docref(NULL, E_WARNING, "Number of colors has to be greater than zero and no more than %d", INT_MAX);
 		RETURN_FALSE;
 	}
-	gdImageTrueColorToPalette(im, dither, (int)ncolors);
+	gdImageTrueColorToPalette(im, dither, ncolors);
 
 	RETURN_TRUE;
 }
