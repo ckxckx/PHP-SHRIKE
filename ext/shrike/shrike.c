@@ -240,12 +240,13 @@ PHP_FUNCTION(shrike_write_to_buffer)
 
 	if ((src = (uint8_t*) zend_fetch_resource(Z_RES_P(z_src), "le_shrike",
 				le_shrike)) == NULL) {
-		php_error(E_ERROR, "Failed to
+		php_error(E_ERROR, "Failed to fetch resource");
 		RETURN_FALSE;
 	}
 
 	if ((dst = (uint8_t*) zend_fetch_resource(Z_RES_P(z_dst), "le_shrike",
 				le_shrike)) == NULL) {
+		php_error(E_ERROR, "Failed to fetch resource");
 		RETURN_FALSE;
 	}
 
@@ -297,7 +298,7 @@ const zend_function_entry shrike_functions[] = {
 	PHP_FE(shrike_record_destination, arginfo_shrike_record_destination)
 	PHP_FE(shrike_record_source, arginfo_shrike_record_source)
 	PHP_FE(shrike_alloc_buffer, arginfo_shrike_alloc_buffer)
-	PHP_FE(shrike_write_buffer, arginfo_shrike_write_buffer)
+	PHP_FE(shrike_write_to_buffer, arginfo_shrike_write_to_buffer)
 	PHP_FE_END	/* Must be the last line in shrike_functions[] */
 };
 /* }}} */
