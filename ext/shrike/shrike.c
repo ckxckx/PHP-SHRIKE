@@ -54,11 +54,16 @@ size_t shrike_current_index;
 size_t shrike_source_index;
 size_t shrike_destination_index;
 
+/* {{{ shrike_pointer_sequence_start
+ */
 PHP_FUNCTION(shrike_pointer_sequence_start)
 {
 	shrike_pointer_logging_enabled = 1;
 }
+/* }}} */
 
+/* {{{ log_proc_map
+ */
 int log_proc_map()
 {
 	size_t read;
@@ -90,7 +95,10 @@ int log_proc_map()
 	shrike_pointer_logging_enabled = tmp_pointer_logging;
 	return 0;
 }
+/* }}} */
 
+/* {{{ shrike_pointer_sequence_end
+ */
 PHP_FUNCTION(shrike_pointer_sequence_end)
 {
 	size_t i = 0;
@@ -128,17 +136,26 @@ PHP_FUNCTION(shrike_pointer_sequence_end)
 	shrike_allocated_pointers_idx = 0;
 	memset(shrike_allocated_pointers, 0x0, 10000 * sizeof(void *));
 }
+/* }}} */
 
+/* {{{ shrike_sequence_end
+ */
 PHP_FUNCTION(shrike_sequence_start)
 {
 	shrike_logging_enabled = 1;
 }
+/* }}} */
 
+/* {{{ shrike_sequence_end
+ */
 PHP_FUNCTION(shrike_sequence_end)
 {
 	shrike_logging_enabled = 0;
 }
+/* }}} */
 
+/* {{{ shrike_record_destination
+ */
 ZEND_BEGIN_ARG_INFO_EX(arginfo_shrike_record_destination, 0, 0, 1)
 	ZEND_ARG_INFO(0, "destination")
 ZEND_END_ARG_INFO()
@@ -155,7 +172,10 @@ PHP_FUNCTION(shrike_record_destination)
 	shrike_current_index = 0;
 	shrike_destination_index = d;
 }
+/* }}} */
 
+/* {{{ shrike_record_source
+ */
 ZEND_BEGIN_ARG_INFO_EX(arginfo_shrike_record_source, 0, 0, 1)
 	ZEND_ARG_INFO(0, "source")
 ZEND_END_ARG_INFO()
@@ -172,7 +192,10 @@ PHP_FUNCTION(shrike_record_source)
 	shrike_current_index = 0;
 	shrike_source_index = s;
 }
+/* }}} */
 
+/* {{{ shrike_alloc_buffer
+ */
 ZEND_BEGIN_ARG_INFO_EX(arginfo_shrike_alloc_buffer, 0, 0, 1)
 	ZEND_ARG_INFO(0, "size")
 ZEND_END_ARG_INFO()
@@ -194,7 +217,10 @@ PHP_FUNCTION(shrike_alloc_buffer)
 
 	RETURN_RES(zend_register_resource(ptr, le_shrike));
 }
+/* }}} */
 
+/* {{{ shrike_write_to_buffer
+ */
 ZEND_BEGIN_ARG_INFO_EX(arginfo_shrike_write_to_buffer, 0, 0, 1)
 	ZEND_ARG_INFO(0, dst)
 	ZEND_ARG_INFO(0, src)
@@ -224,6 +250,7 @@ PHP_FUNCTION(shrike_write_to_buffer)
 	}
 
 }
+/* }}} */
 
 /* {{{ PHP_MINIT_FUNCTION
  */
