@@ -36,6 +36,9 @@ uint8_t *buffers[MAX_DVE_BUFFERS];
 size_t next_buffer_idx;
 
 /* {{{ dve_alloc_buffer
+ * Allocate and zero out a new buffer of the requested size. The returned ID can
+ * be used to refer to the allocated buffer in future operations, such as
+ * reading, writing and deallocation.
  */
 ZEND_BEGIN_ARG_INFO_EX(arginfo_dve_alloc_buffer, 0, 0, 1)
 	ZEND_ARG_INFO(0, "size")
@@ -60,6 +63,7 @@ PHP_FUNCTION(dve_alloc_buffer)
 		php_error(E_ERROR, "Failed to allocate buffer");
 		RETURN_FALSE;
 	}
+	memset(ptr, 0, sz);
 
 	buffers[next_buffer_idx] = ptr;
 	RETURN_LONG(next_buffer_idx++);
