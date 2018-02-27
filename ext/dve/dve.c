@@ -97,7 +97,7 @@ PHP_FUNCTION(dve_free_buffer)
 
 /* {{{ dve_write_to_buffer
  */
-ZEND_BEGIN_ARG_INFO_EX(arginfo_dve_write_to_buffer, 0, 0, 1)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_dve_write_to_buffer, 0, 0, 3)
 	ZEND_ARG_INFO(0, dst)
 	ZEND_ARG_INFO(0, src)
 	ZEND_ARG_INFO(0, count)
@@ -125,9 +125,78 @@ PHP_FUNCTION(dve_write_to_buffer)
 }
 /* }}} */
 
+/* {{{ dve_store_buffer_address
+ * Store the address of the buffer referenced by the third argument at the
+ * specified offset in the buffer referenced by the first argument. This is
+ * intended to simulate situations in which the address of a function pointer
+ * table, for example, is stored in another object in order to be leaked or
+ * corrupted.
+ */
+ZEND_BEGIN_ARG_INFO_EX(arginfo_dve_store_buffer_to_address, 0, 0, 3)
+	ZEND_ARG_INFO(0, dst)
+	ZEND_ARG_INFO(0, offset)
+	ZEND_ARG_INFO(0, src)
+ZEND_END_ARG_INFO()
+
+PHP_FUNCTION(dve_store_buffer_address)
+{
+	size_t idx;
+	size_t dst_buf_id, src_buf_id, offset;
+	uint8_t *dst, *src;
+
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "lll",
+				&dst_buf_id, &offset, &src_buf_id) == FAILURE) {
+	    return;
+	}
+
+	dst = buffers[dst_buf_id];
+	if (!dst) {
+		php_error(E_ERROR, "Attempting to write to free buffer");
+		RETURN_FALSE;
+	}
+
+	src = buffers[src_buf_id];
+	if (!dst) {
+		php_error(E_ERROR, "Attempting to reference a free buffer");
+		RETURN_FALSE;
+	}
+
+	for (idx = 0; idx < sizeof(uint8_t*); ++idx) {
+		dst[offset + idx] = ((size_t) src >> (idx * 8)) & 0xff;
+	}
+}
+/* }}} */
+
+/* {{{ dve_address_of_buffer
+ * Retrieve the address of the specified buffer
+ */
+ZEND_BEGIN_ARG_INFO_EX(arginfo_dve_address_of_buffer, 0, 0, 1)
+	ZEND_ARG_INFO(0, buf)
+ZEND_END_ARG_INFO()
+
+PHP_FUNCTION(dve_address_of_buffer)
+{
+	size_t buf_id;
+	uint8_t *buf;
+
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l",
+				&buf_id) == FAILURE) {
+	    return;
+	}
+
+	buf = buffers[buf_id];
+	if (!buf) {
+		php_error(E_ERROR, "Buffer already freed");
+		RETURN_FALSE;
+	}
+
+	RETURN_LONG((size_t) buf);
+}
+/* }}} */
+
 /* {{{ dve_read_from_buffer
  */
-ZEND_BEGIN_ARG_INFO_EX(arginfo_dve_read_from_buffer, 0, 0, 1)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_dve_read_from_buffer, 0, 0, 3)
 	ZEND_ARG_INFO(0, src)
 	ZEND_ARG_INFO(0, start_idx)
 	ZEND_ARG_INFO(0, count)
@@ -157,8 +226,6 @@ PHP_FUNCTION(dve_read_from_buffer)
 	}
 
 	memcpy(ZSTR_VAL(content), src + start_idx , count);
-	ZSTR_VAL(content)[count] = '\0';
-
 	RETURN_STR(content);
 }
 /* }}} */
@@ -213,6 +280,8 @@ const zend_function_entry dve_functions[] = {
 	PHP_FE(dve_write_to_buffer, arginfo_dve_write_to_buffer)
 	PHP_FE(dve_read_from_buffer, arginfo_dve_read_from_buffer)
 	PHP_FE(dve_free_buffer, arginfo_dve_free_buffer)
+	PHP_FE(dve_store_buffer_address, arginfo_dve_store_buffer_to_address)
+	PHP_FE(dve_address_of_buffer, arginfo_dve_address_of_buffer)
 	PHP_FE_END	/* Must be the last line in dve_functions[] */
 };
 /* }}} */
