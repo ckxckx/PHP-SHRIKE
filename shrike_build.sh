@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 ./configure --prefix=`pwd`/install \
-	--enable-mbstring --enable-intl --enable-shrike --with-gd CFLAGS=-g
+	--enable-shrike --enable-dve \
+	--enable-mbstring --enable-intl --with-gd CFLAGS=-g
 
 make -j 2

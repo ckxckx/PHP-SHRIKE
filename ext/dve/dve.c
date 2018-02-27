@@ -12,7 +12,7 @@
   | obtain it through the world-wide-web, please send a note to          |
   | license@php.net so we can mail you a copy immediately.               |
   +----------------------------------------------------------------------+
-  | Author:                                                              |
+  | Author: Sean Heelan (sean@vertex.re)                                 |
   +----------------------------------------------------------------------+
 */
 
@@ -27,70 +27,145 @@
 #include "ext/standard/info.h"
 #include "php_dve.h"
 
-/* If you declare any globals in php_dve.h uncomment this:
-ZEND_DECLARE_MODULE_GLOBALS(dve)
-*/
-
 /* True global resources - no need for thread safety here */
 static int le_dve;
 
-/* {{{ PHP_INI
+/* {{{ dve_alloc_buffer
  */
-/* Remove comments and fill if you need to have entries in php.ini
-PHP_INI_BEGIN()
-    STD_PHP_INI_ENTRY("dve.global_value",      "42", PHP_INI_ALL, OnUpdateLong, global_value, zend_dve_globals, dve_globals)
-    STD_PHP_INI_ENTRY("dve.global_string", "foobar", PHP_INI_ALL, OnUpdateString, global_string, zend_dve_globals, dve_globals)
-PHP_INI_END()
-*/
-/* }}} */
+ZEND_BEGIN_ARG_INFO_EX(arginfo_dve_alloc_buffer, 0, 0, 1)
+	ZEND_ARG_INFO(0, "size")
+ZEND_END_ARG_INFO()
 
-/* Remove the following function when you have successfully modified config.m4
-   so that your module can be compiled into PHP, it exists only for testing
-   purposes. */
-
-/* Every user-visible function in PHP should document itself in the source */
-/* {{{ proto string confirm_dve_compiled(string arg)
-   Return a string to confirm that the module is compiled in */
-PHP_FUNCTION(confirm_dve_compiled)
+PHP_FUNCTION(dve_alloc_buffer)
 {
-	char *arg = NULL;
-	size_t arg_len, len;
-	zend_string *strg;
+	size_t sz;
+	uint8_t *ptr = NULL;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS(), "s", &arg, &arg_len) == FAILURE) {
-		return;
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &sz) == FAILURE) {
+	    return;
 	}
 
-	strg = strpprintf(0, "Congratulations! You have successfully modified ext/%.78s/config.m4. Module %.78s is now compiled into PHP.", "dve", arg);
+	ptr = emalloc(sz);
+	if (!ptr) {
+		php_error(E_ERROR, "Failed to allocate buffer");
+		RETURN_FALSE;
+	}
 
-	RETURN_STR(strg);
+	RETURN_RES(zend_register_resource(ptr, le_dve));
 }
 /* }}} */
-/* The previous line is meant for vim and emacs, so it can correctly fold and
-   unfold functions in source code. See the corresponding marks just before
-   function definition, where the functions purpose is also documented. Please
-   follow this convention for the convenience of others editing your code.
-*/
 
-
-/* {{{ php_dve_init_globals
+/* {{{ dve_free_buffer
  */
-/* Uncomment this function if you have INI entries
-static void php_dve_init_globals(zend_dve_globals *dve_globals)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_dve_free_buffer, 0, 0, 1)
+	ZEND_ARG_INFO(0, buf)
+ZEND_END_ARG_INFO()
+
+PHP_FUNCTION(dve_free_buffer)
 {
-	dve_globals->global_value = 0;
-	dve_globals->global_string = NULL;
+	zval *z_buf;
+	uint8_t *buf;
+
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "r",
+				&z_buf) == FAILURE) {
+	    return;
+	}
+
+	if ((buf = (uint8_t*) zend_fetch_resource(Z_RES_P(z_buf), "le_dve",
+				le_dve)) == NULL) {
+		php_error(E_ERROR, "Failed to fetch resource");
+		RETURN_FALSE;
+	}
+
+	efree(buf);
 }
+/* }}} */
+
+/* {{{ dve_write_to_buffer
+ */
+ZEND_BEGIN_ARG_INFO_EX(arginfo_dve_write_to_buffer, 0, 0, 1)
+	ZEND_ARG_INFO(0, dst)
+	ZEND_ARG_INFO(0, src)
+	ZEND_ARG_INFO(0, count)
+ZEND_END_ARG_INFO()
+
+PHP_FUNCTION(dve_write_to_buffer)
+{
+	zval *z_src, *z_dst;
+	uint8_t *dst;
+	char *src;
+	size_t src_len;
+
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rs",
+				&z_dst, &src, &src_len) == FAILURE) {
+	    return;
+	}
+
+	if ((dst = (uint8_t*) zend_fetch_resource(Z_RES_P(z_dst), "le_dve",
+				le_dve)) == NULL) {
+		php_error(E_ERROR, "Failed to fetch resource");
+		RETURN_FALSE;
+	}
+
+	// Don't copy the trailing NULL
+	memcpy(dst, src, src_len);
+}
+/* }}} */
+
+/* {{{ dve_read_from_buffer
+ */
+ZEND_BEGIN_ARG_INFO_EX(arginfo_dve_read_from_buffer, 0, 0, 1)
+	ZEND_ARG_INFO(0, src)
+	ZEND_ARG_INFO(0, start_idx)
+	ZEND_ARG_INFO(0, count)
+ZEND_END_ARG_INFO()
+
+PHP_FUNCTION(dve_read_from_buffer)
+{
+	size_t start_idx, count;
+	uint8_t *src;
+	zval *z_src;
+	zend_string *content;
+
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rll",
+				&z_src, &start_idx, &count) == FAILURE) {
+	    return;
+	}
+
+	if ((src = (uint8_t*) zend_fetch_resource(Z_RES_P(z_src), "le_dve",
+				le_dve)) == NULL) {
+		php_error(E_ERROR, "Failed to fetch resource");
+		RETURN_FALSE;
+	}
+
+	content = zend_string_alloc(count, 0);
+	if (!content) {
+		php_error(E_ERROR, "Failed to allocate destination buffer");
+		RETURN_FALSE;
+	}
+
+	memcpy(ZSTR_VAL(content), src + start_idx , count);
+	ZSTR_VAL(content)[count] = '\0';
+
+	RETURN_STR(content);
+}
+/* }}} */
+
+/* {{{ php_dve_destroy_resource
 */
+static void php_dve_destroy_resource(zend_resource *rsrc)
+{
+	efree(rsrc->ptr);
+}
+
 /* }}} */
 
 /* {{{ PHP_MINIT_FUNCTION
  */
 PHP_MINIT_FUNCTION(dve)
 {
-	/* If you have INI entries, uncomment these lines
-	REGISTER_INI_ENTRIES();
-	*/
+	le_dve = zend_register_list_destructors_ex(php_dve_destroy_resource, NULL,
+			"dve", module_number);
 	return SUCCESS;
 }
 /* }}} */
@@ -106,27 +181,6 @@ PHP_MSHUTDOWN_FUNCTION(dve)
 }
 /* }}} */
 
-/* Remove if there's nothing to do at request start */
-/* {{{ PHP_RINIT_FUNCTION
- */
-PHP_RINIT_FUNCTION(dve)
-{
-#if defined(COMPILE_DL_DVE) && defined(ZTS)
-	ZEND_TSRMLS_CACHE_UPDATE();
-#endif
-	return SUCCESS;
-}
-/* }}} */
-
-/* Remove if there's nothing to do at request end */
-/* {{{ PHP_RSHUTDOWN_FUNCTION
- */
-PHP_RSHUTDOWN_FUNCTION(dve)
-{
-	return SUCCESS;
-}
-/* }}} */
-
 /* {{{ PHP_MINFO_FUNCTION
  */
 PHP_MINFO_FUNCTION(dve)
@@ -135,9 +189,6 @@ PHP_MINFO_FUNCTION(dve)
 	php_info_print_table_header(2, "dve support", "enabled");
 	php_info_print_table_end();
 
-	/* Remove comments if you have entries in php.ini
-	DISPLAY_INI_ENTRIES();
-	*/
 }
 /* }}} */
 
@@ -146,7 +197,10 @@ PHP_MINFO_FUNCTION(dve)
  * Every user visible function must have an entry in dve_functions[].
  */
 const zend_function_entry dve_functions[] = {
-	PHP_FE(confirm_dve_compiled,	NULL)		/* For testing, remove later. */
+	PHP_FE(dve_alloc_buffer, arginfo_dve_alloc_buffer)
+	PHP_FE(dve_write_to_buffer, arginfo_dve_write_to_buffer)
+	PHP_FE(dve_read_from_buffer, arginfo_dve_read_from_buffer)
+	PHP_FE(dve_free_buffer, arginfo_dve_free_buffer)
 	PHP_FE_END	/* Must be the last line in dve_functions[] */
 };
 /* }}} */
@@ -159,8 +213,8 @@ zend_module_entry dve_module_entry = {
 	dve_functions,
 	PHP_MINIT(dve),
 	PHP_MSHUTDOWN(dve),
-	PHP_RINIT(dve),		/* Replace with NULL if there's nothing to do at request start */
-	PHP_RSHUTDOWN(dve),	/* Replace with NULL if there's nothing to do at request end */
+	NULL,
+	NULL,
 	PHP_MINFO(dve),
 	PHP_DVE_VERSION,
 	STANDARD_MODULE_PROPERTIES

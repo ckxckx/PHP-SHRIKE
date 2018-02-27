@@ -13,9 +13,9 @@ dnl [  --with-dve             Include dve support])
 
 dnl Otherwise use enable:
 
-dnl PHP_ARG_ENABLE(dve, whether to enable dve support,
-dnl Make sure that the comment is aligned:
-dnl [  --enable-dve           Enable dve support])
+PHP_ARG_ENABLE(dve, whether to enable dve support,
+Make sure that the comment is aligned:
+[  --enable-dve           Enable dve support])
 
 if test "$PHP_DVE" != "no"; then
   dnl Write more examples of tests here...

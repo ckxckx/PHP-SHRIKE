@@ -194,65 +194,6 @@ PHP_FUNCTION(shrike_record_source)
 }
 /* }}} */
 
-/* {{{ shrike_alloc_buffer
- */
-ZEND_BEGIN_ARG_INFO_EX(arginfo_shrike_alloc_buffer, 0, 0, 1)
-	ZEND_ARG_INFO(0, "size")
-ZEND_END_ARG_INFO()
-
-PHP_FUNCTION(shrike_alloc_buffer)
-{
-	size_t sz = 0;
-	uint8_t *ptr = NULL;
-
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &sz) == FAILURE) {
-	    return;
-	}
-
-	ptr = emalloc(sz);
-	if (!ptr) {
-		php_error(E_ERROR, "Failed to allocate buffer");
-		RETURN_FALSE;
-	}
-
-	RETURN_RES(zend_register_resource(ptr, le_shrike));
-}
-/* }}} */
-
-/* {{{ shrike_write_to_buffer
- */
-ZEND_BEGIN_ARG_INFO_EX(arginfo_shrike_write_to_buffer, 0, 0, 1)
-	ZEND_ARG_INFO(0, dst)
-	ZEND_ARG_INFO(0, src)
-	ZEND_ARG_INFO(0, count)
-ZEND_END_ARG_INFO()
-
-PHP_FUNCTION(shrike_write_to_buffer)
-{
-	size_t sz = 0;
-	zval *z_src, *z_dst;
-	uint8_t *src, *dst;
-
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rrl",
-				&z_src, &z_dst, &sz) == FAILURE) {
-	    return;
-	}
-
-	if ((src = (uint8_t*) zend_fetch_resource(Z_RES_P(z_src), "le_shrike",
-				le_shrike)) == NULL) {
-		php_error(E_ERROR, "Failed to fetch resource");
-		RETURN_FALSE;
-	}
-
-	if ((dst = (uint8_t*) zend_fetch_resource(Z_RES_P(z_dst), "le_shrike",
-				le_shrike)) == NULL) {
-		php_error(E_ERROR, "Failed to fetch resource");
-		RETURN_FALSE;
-	}
-
-}
-/* }}} */
-
 /* {{{ PHP_MINIT_FUNCTION
  */
 PHP_MINIT_FUNCTION(shrike)
@@ -297,8 +238,6 @@ const zend_function_entry shrike_functions[] = {
 	PHP_FE(shrike_pointer_sequence_end, NULL)
 	PHP_FE(shrike_record_destination, arginfo_shrike_record_destination)
 	PHP_FE(shrike_record_source, arginfo_shrike_record_source)
-	PHP_FE(shrike_alloc_buffer, arginfo_shrike_alloc_buffer)
-	PHP_FE(shrike_write_to_buffer, arginfo_shrike_write_to_buffer)
 	PHP_FE_END	/* Must be the last line in shrike_functions[] */
 };
 /* }}} */
