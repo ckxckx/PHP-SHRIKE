@@ -138,7 +138,7 @@ PHP_FUNCTION(shrike_pointer_sequence_end)
 }
 /* }}} */
 
-/* {{{ shrike_sequence_end
+/* {{{ shrike_sequence_start
  */
 PHP_FUNCTION(shrike_sequence_start)
 {

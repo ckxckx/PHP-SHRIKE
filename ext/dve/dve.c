@@ -27,8 +27,13 @@
 #include "ext/standard/info.h"
 #include "php_dve.h"
 
+#define MAX_DVE_BUFFERS 8192
+
 /* True global resources - no need for thread safety here */
 static int le_dve;
+
+uint8_t *buffers[MAX_DVE_BUFFERS];
+size_t next_buffer_idx;
 
 /* {{{ dve_alloc_buffer
  */
@@ -45,13 +50,19 @@ PHP_FUNCTION(dve_alloc_buffer)
 	    return;
 	}
 
+	if (next_buffer_idx >= MAX_DVE_BUFFERS) {
+		php_error(E_ERROR, "Maximum number of allocated buffers exceeded");
+		RETURN_FALSE;
+	}
+
 	ptr = emalloc(sz);
 	if (!ptr) {
 		php_error(E_ERROR, "Failed to allocate buffer");
 		RETURN_FALSE;
 	}
 
-	RETURN_RES(zend_register_resource(ptr, le_dve));
+	buffers[next_buffer_idx] = ptr;
+	RETURN_LONG(next_buffer_idx++);
 }
 /* }}} */
 
@@ -63,21 +74,20 @@ ZEND_END_ARG_INFO()
 
 PHP_FUNCTION(dve_free_buffer)
 {
-	zval *z_buf;
-	uint8_t *buf;
+	size_t buf_id;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "r",
-				&z_buf) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l",
+				&buf_id) == FAILURE) {
 	    return;
 	}
 
-	if ((buf = (uint8_t*) zend_fetch_resource(Z_RES_P(z_buf), "le_dve",
-				le_dve)) == NULL) {
-		php_error(E_ERROR, "Failed to fetch resource");
+	if (!buffers[buf_id]) {
+		php_error(E_ERROR, "Attempting to free already free buffer");
 		RETURN_FALSE;
 	}
 
-	efree(buf);
+	efree(buffers[buf_id]);
+	buffers[buf_id] = NULL;
 }
 /* }}} */
 
@@ -91,19 +101,18 @@ ZEND_END_ARG_INFO()
 
 PHP_FUNCTION(dve_write_to_buffer)
 {
-	zval *z_src, *z_dst;
 	uint8_t *dst;
 	char *src;
-	size_t src_len;
+	size_t src_len, buf_id;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rs",
-				&z_dst, &src, &src_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ls",
+				&buf_id, &src, &src_len) == FAILURE) {
 	    return;
 	}
 
-	if ((dst = (uint8_t*) zend_fetch_resource(Z_RES_P(z_dst), "le_dve",
-				le_dve)) == NULL) {
-		php_error(E_ERROR, "Failed to fetch resource");
+	dst = buffers[buf_id];
+	if (!dst) {
+		php_error(E_ERROR, "Attempting to write to free buffer");
 		RETURN_FALSE;
 	}
 
@@ -122,19 +131,18 @@ ZEND_END_ARG_INFO()
 
 PHP_FUNCTION(dve_read_from_buffer)
 {
-	size_t start_idx, count;
+	size_t start_idx, count, buf_id;
 	uint8_t *src;
-	zval *z_src;
 	zend_string *content;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rll",
-				&z_src, &start_idx, &count) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "lll",
+				&buf_id, &start_idx, &count) == FAILURE) {
 	    return;
 	}
 
-	if ((src = (uint8_t*) zend_fetch_resource(Z_RES_P(z_src), "le_dve",
-				le_dve)) == NULL) {
-		php_error(E_ERROR, "Failed to fetch resource");
+	src = buffers[buf_id];
+	if (!src) {
+		php_error(E_ERROR, "Attempting to read from free buffer");
 		RETURN_FALSE;
 	}
 
