@@ -2407,11 +2407,12 @@ extern int shrike_pointer_logging_enabled;
 extern void *shrike_allocated_pointers[];
 extern size_t shrike_allocated_sizes[];
 extern size_t next_ptr_idx, shrike_allocated_pointers_idx;
-extern int shrike_destination_recording_enabled;
-extern int shrike_source_recording_enabled;
+
+extern void* shrike_recorded_allocs[];
+extern int shrike_alloc_recording_enabled;
 extern size_t shrike_current_index;
-extern size_t shrike_source_index;
-extern size_t shrike_destination_index;
+extern size_t shrike_alloc_index;
+extern size_t shrike_alloc_id_to_use;
 
 ZEND_API void* ZEND_FASTCALL _emalloc(size_t size ZEND_FILE_LINE_DC ZEND_FILE_LINE_ORIG_DC)
 {
@@ -2437,18 +2438,10 @@ ZEND_API void* ZEND_FASTCALL _emalloc(size_t size ZEND_FILE_LINE_DC ZEND_FILE_LI
             shrike_allocated_pointers_idx += 1;
         }
 
-        if (shrike_destination_recording_enabled) {
-            if (shrike_current_index == shrike_destination_index) {
-                printf("vtx dst %lu 0x%" PRIxPTR "\n", size, (uintptr_t) p);
-                shrike_destination_recording_enabled = 0;
-            }
-
-            shrike_current_index++;
-        }
-
-        if (shrike_source_recording_enabled) {
-            if (shrike_current_index == shrike_source_index) {
-                printf("vtx src %lu 0x%" PRIxPTR "\n", size, (uintptr_t) p);
+        if (shrike_alloc_recording_enabled) {
+            if (shrike_current_index == shrike_alloc_index) {
+                shrike_recorded_allocs[shrike_alloc_id_to_use] = p;
+                shrike_alloc_recording_enabled = 0;
             }
 
             shrike_current_index++;
@@ -2521,18 +2514,10 @@ ZEND_API void* ZEND_FASTCALL _erealloc(void *ptr, size_t size ZEND_FILE_LINE_DC 
             shrike_allocated_pointers_idx += 1;
         }
 
-        if (shrike_destination_recording_enabled) {
-            if (shrike_current_index == shrike_destination_index) {
-                printf("vtx dst %lu 0x%" PRIxPTR "\n", size, (uintptr_t) p);
-                shrike_destination_recording_enabled = 0;
-            }
-
-            shrike_current_index++;
-        }
-
-        if (shrike_source_recording_enabled) {
-            if (shrike_current_index == shrike_source_index) {
-                printf("vtx src %lu 0x%" PRIxPTR "\n", size, (uintptr_t) p);
+        if (shrike_alloc_recording_enabled) {
+            if (shrike_current_index == shrike_alloc_index) {
+                shrike_recorded_allocs[shrike_alloc_id_to_use] = p;
+                shrike_alloc_recording_enabled = 0;
             }
 
             shrike_current_index++;

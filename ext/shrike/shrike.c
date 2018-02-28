@@ -27,9 +27,12 @@
 #include "ext/standard/info.h"
 #include "php_shrike.h"
 
-/* If you declare any globals in php_shrike.h uncomment this:
-ZEND_DECLARE_MODULE_GLOBALS(shrike)
-*/
+// The maximum number of allocations that can be requested to be recorded via
+// the shrike_record_alloc function from PHP
+#define SHRIKE_MAX_RECORDED_ALLOCS 64
+// The maximum number of pointers that can be recorded when pointer recording is
+// enabled via shrike_pointer_sequence_st
+#define SHRIKE_MAX_RECORDED_POINTERS 8192
 
 /* True global resources - no need for thread safety here */
 static int le_shrike;
@@ -43,16 +46,16 @@ int shrike_logging_enabled;
 // Indicates whether or not to enable searching for pointers in memory
 int shrike_pointer_logging_enabled;
 
-void *shrike_allocated_pointers[10000];
-size_t shrike_allocated_sizes[10000];
+void *shrike_allocated_pointers[SHRIKE_MAX_RECORDED_POINTERS];
+size_t shrike_allocated_sizes[SHRIKE_MAX_RECORDED_POINTERS];
 size_t shrike_allocated_pointers_idx;
 
-int shrike_destination_recording_enabled;
-int shrike_source_recording_enabled;
+int shrike_alloc_recording_enabled;
 
+void* shrike_recorded_allocs[SHRIKE_MAX_RECORDED_ALLOCS];
 size_t shrike_current_index;
-size_t shrike_source_index;
-size_t shrike_destination_index;
+size_t shrike_alloc_index;
+size_t shrike_alloc_id_to_use;
 
 /* {{{ shrike_pointer_sequence_start
  */
@@ -134,7 +137,8 @@ PHP_FUNCTION(shrike_pointer_sequence_end)
 
 	shrike_pointer_logging_enabled = 0;
 	shrike_allocated_pointers_idx = 0;
-	memset(shrike_allocated_pointers, 0x0, 10000 * sizeof(void *));
+	memset(shrike_allocated_pointers, 0x0,
+			SHRIKE_MAX_RECORDED_POINTERS * sizeof(void *));
 }
 /* }}} */
 
@@ -154,43 +158,71 @@ PHP_FUNCTION(shrike_sequence_end)
 }
 /* }}} */
 
-/* {{{ shrike_record_destination
+/* {{{ shrike_record_alloc
  */
-ZEND_BEGIN_ARG_INFO_EX(arginfo_shrike_record_destination, 0, 0, 1)
-	ZEND_ARG_INFO(0, "destination")
+ZEND_BEGIN_ARG_INFO_EX(arginfo_shrike_record_alloc, 0, 0, 2)
+	ZEND_ARG_INFO(0, index)
+	ZEND_ARG_INFO(0, alloc_id)
 ZEND_END_ARG_INFO()
 
-PHP_FUNCTION(shrike_record_destination)
+PHP_FUNCTION(shrike_record_alloc)
 {
-	size_t d = 0;
+	size_t index, alloc_id;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &d) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ll",
+				&index, &alloc_id) == FAILURE) {
 	    return;
 	}
 
-	shrike_destination_recording_enabled = 1;
+	if (shrike_recorded_allocs[index]) {
+		php_error(E_ERROR, "Attempting to reuse an inuse allocation ID");
+		RETURN_FALSE;
+	}
+
+	shrike_alloc_recording_enabled = 1;
 	shrike_current_index = 0;
-	shrike_destination_index = d;
+	shrike_alloc_index = index;
+	shrike_alloc_id_to_use = alloc_id;
 }
 /* }}} */
 
-/* {{{ shrike_record_source
+/* {{{ shrike_print_distance
  */
-ZEND_BEGIN_ARG_INFO_EX(arginfo_shrike_record_source, 0, 0, 1)
-	ZEND_ARG_INFO(0, "source")
+ZEND_BEGIN_ARG_INFO_EX(arginfo_shrike_print_distance, 0, 0, 2)
+	ZEND_ARG_INFO(0, id0)
+	ZEND_ARG_INFO(0, id1)
 ZEND_END_ARG_INFO()
 
-PHP_FUNCTION(shrike_record_source)
+PHP_FUNCTION(shrike_print_distance)
 {
-	size_t s = 0;
+	void *alloc0, *alloc1;
+	size_t id0, id1, distance;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &s) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ll",
+				&id0, &id1) == FAILURE) {
 	    return;
 	}
 
-	shrike_source_recording_enabled = 1;
-	shrike_current_index = 0;
-	shrike_source_index = s;
+	if (id0 > SHRIKE_MAX_RECORDED_ALLOCS || id1 > SHRIKE_MAX_RECORDED_ALLOCS) {
+		php_error(E_ERROR, "Requested allocation ID is too large");
+		RETURN_LONG(0);
+	}
+
+	alloc0 = shrike_recorded_allocs[id0];
+	if (!alloc0) {
+		php_error(E_ERROR, "Invalid first ID");
+		RETURN_LONG(0);
+	}
+
+	alloc1 = shrike_recorded_allocs[id1];
+	if (!alloc1) {
+		php_error(E_ERROR, "Invalid second ID");
+		RETURN_LONG(0);
+	}
+
+	distance = (size_t) alloc0 - (size_t) alloc1;
+	printf("vtx distance %" PRId64 "\n", distance);
+	RETURN_LONG(distance);
 }
 /* }}} */
 
@@ -236,8 +268,8 @@ const zend_function_entry shrike_functions[] = {
 	PHP_FE(shrike_sequence_end, NULL)
 	PHP_FE(shrike_pointer_sequence_start, NULL)
 	PHP_FE(shrike_pointer_sequence_end, NULL)
-	PHP_FE(shrike_record_destination, arginfo_shrike_record_destination)
-	PHP_FE(shrike_record_source, arginfo_shrike_record_source)
+	PHP_FE(shrike_record_alloc, arginfo_shrike_record_alloc)
+	PHP_FE(shrike_print_distance, arginfo_shrike_print_distance)
 	PHP_FE_END	/* Must be the last line in shrike_functions[] */
 };
 /* }}} */
