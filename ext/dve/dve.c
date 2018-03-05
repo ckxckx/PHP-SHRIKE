@@ -230,6 +230,38 @@ PHP_FUNCTION(dve_read_from_buffer)
 }
 /* }}} */
 
+/* {{{ dve_call_function_pointer
+ */
+ZEND_BEGIN_ARG_INFO_EX(arginfo_dve_call_function_pointer, 0, 0, 2)
+	ZEND_ARG_INFO(0, src)
+	ZEND_ARG_INFO(0, start_idx)
+ZEND_END_ARG_INFO()
+
+typedef void (*FunctionPointer)();
+
+PHP_FUNCTION(dve_call_function_pointer)
+{
+	size_t start_idx, buf_id;
+	uint8_t *src;
+	zend_string *content;
+	FunctionPointer ptr;
+
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ll",
+				&buf_id, &start_idx) == FAILURE) {
+	    return;
+	}
+
+	src = buffers[buf_id];
+	if (!src) {
+		php_error(E_ERROR, "Attempting to read from free buffer");
+		RETURN_FALSE;
+	}
+
+	ptr = *((FunctionPointer*) (src + start_idx));
+	ptr();
+}
+/* }}} */
+
 /* {{{ php_dve_destroy_resource
 */
 static void php_dve_destroy_resource(zend_resource *rsrc)
@@ -282,6 +314,7 @@ const zend_function_entry dve_functions[] = {
 	PHP_FE(dve_free_buffer, arginfo_dve_free_buffer)
 	PHP_FE(dve_store_buffer_address, arginfo_dve_store_buffer_to_address)
 	PHP_FE(dve_address_of_buffer, arginfo_dve_address_of_buffer)
+	PHP_FE(dve_call_function_pointer, arginfo_dve_call_function_pointer)
 	PHP_FE_END	/* Must be the last line in dve_functions[] */
 };
 /* }}} */
