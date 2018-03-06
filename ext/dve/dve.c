@@ -22,6 +22,8 @@
 #include "config.h"
 #endif
 
+#include <sys/mman.h>
+
 #include "php.h"
 #include "php_ini.h"
 #include "ext/standard/info.h"
@@ -41,7 +43,7 @@ size_t next_buffer_idx;
  * reading, writing and deallocation.
  */
 ZEND_BEGIN_ARG_INFO_EX(arginfo_dve_alloc_buffer, 0, 0, 1)
-	ZEND_ARG_INFO(0, "size")
+	ZEND_ARG_INFO(0, size)
 ZEND_END_ARG_INFO()
 
 PHP_FUNCTION(dve_alloc_buffer)
@@ -59,6 +61,42 @@ PHP_FUNCTION(dve_alloc_buffer)
 	}
 
 	ptr = emalloc(sz);
+	if (!ptr) {
+		php_error(E_ERROR, "Failed to allocate buffer");
+		RETURN_FALSE;
+	}
+	memset(ptr, 0, sz);
+
+	buffers[next_buffer_idx] = ptr;
+	RETURN_LONG(next_buffer_idx++);
+}
+/* }}} */
+
+/* {{{ dve_mmap_executable_buffer
+ * mmap an executable buffer. The returned ID can be used to refer to the
+ * allocated buffer in future operations, such as reading, writing and
+ * deallocation.
+ */
+ZEND_BEGIN_ARG_INFO_EX(arginfo_dve_mmap_executable_buffer, 0, 0, 1)
+	ZEND_ARG_INFO(0, size)
+ZEND_END_ARG_INFO()
+
+PHP_FUNCTION(dve_mmap_executable_buffer)
+{
+	size_t sz;
+	uint8_t *ptr = NULL;
+
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &sz) == FAILURE) {
+	    return;
+	}
+
+	if (next_buffer_idx >= MAX_DVE_BUFFERS) {
+		php_error(E_ERROR, "Maximum number of allocated buffers exceeded");
+		RETURN_FALSE;
+	}
+
+	ptr = mmap(NULL, sz, PROT_EXEC | PROT_READ | PROT_WRITE,
+			MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 	if (!ptr) {
 		php_error(E_ERROR, "Failed to allocate buffer");
 		RETURN_FALSE;
@@ -309,6 +347,7 @@ PHP_MINFO_FUNCTION(dve)
  */
 const zend_function_entry dve_functions[] = {
 	PHP_FE(dve_alloc_buffer, arginfo_dve_alloc_buffer)
+	PHP_FE(dve_mmap_executable_buffer, arginfo_dve_mmap_executable_buffer)
 	PHP_FE(dve_write_to_buffer, arginfo_dve_write_to_buffer)
 	PHP_FE(dve_read_from_buffer, arginfo_dve_read_from_buffer)
 	PHP_FE(dve_free_buffer, arginfo_dve_free_buffer)
