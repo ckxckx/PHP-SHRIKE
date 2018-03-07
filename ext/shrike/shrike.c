@@ -186,6 +186,33 @@ PHP_FUNCTION(shrike_record_alloc)
 }
 /* }}} */
 
+/* {{{ get_distance
+ */
+long get_distance(size_t id0, size_t id1)
+{
+	void *alloc0, *alloc1;
+
+	if (id0 > SHRIKE_MAX_RECORDED_ALLOCS || id1 > SHRIKE_MAX_RECORDED_ALLOCS) {
+		php_error(E_ERROR, "Requested allocation ID is too large");
+		return 0;
+	}
+
+	alloc0 = shrike_recorded_allocs[id0];
+	if (!alloc0) {
+		php_error(E_ERROR, "Invalid first ID");
+		return 0;
+	}
+
+	alloc1 = shrike_recorded_allocs[id1];
+	if (!alloc1) {
+		php_error(E_ERROR, "Invalid second ID");
+		return 0;
+	}
+
+	return (size_t) alloc0 - (size_t) alloc1;
+}
+/* }}} */
+
 /* {{{ shrike_print_distance
  */
 ZEND_BEGIN_ARG_INFO_EX(arginfo_shrike_print_distance, 0, 0, 2)
@@ -195,7 +222,27 @@ ZEND_END_ARG_INFO()
 
 PHP_FUNCTION(shrike_print_distance)
 {
-	void *alloc0, *alloc1;
+	size_t id0, id1, distance;
+
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ll",
+				&id0, &id1) == FAILURE) {
+	    return;
+	}
+	distance = get_distance(id0, id1);
+	printf("vtx distance %" PRId64 "\n", distance);
+	RETURN_LONG(distance);
+}
+/* }}} */
+
+/* {{{ shrike_get_distance
+ */
+ZEND_BEGIN_ARG_INFO_EX(arginfo_shrike_get_distance, 0, 0, 2)
+	ZEND_ARG_INFO(0, id0)
+	ZEND_ARG_INFO(0, id1)
+ZEND_END_ARG_INFO()
+
+PHP_FUNCTION(shrike_get_distance)
+{
 	size_t id0, id1, distance;
 
 	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ll",
@@ -203,26 +250,7 @@ PHP_FUNCTION(shrike_print_distance)
 	    return;
 	}
 
-	if (id0 > SHRIKE_MAX_RECORDED_ALLOCS || id1 > SHRIKE_MAX_RECORDED_ALLOCS) {
-		php_error(E_ERROR, "Requested allocation ID is too large");
-		RETURN_LONG(0);
-	}
-
-	alloc0 = shrike_recorded_allocs[id0];
-	if (!alloc0) {
-		php_error(E_ERROR, "Invalid first ID");
-		RETURN_LONG(0);
-	}
-
-	alloc1 = shrike_recorded_allocs[id1];
-	if (!alloc1) {
-		php_error(E_ERROR, "Invalid second ID");
-		RETURN_LONG(0);
-	}
-
-	distance = (size_t) alloc0 - (size_t) alloc1;
-	printf("vtx distance %" PRId64 "\n", distance);
-	RETURN_LONG(distance);
+	RETURN_LONG(get_distance(id0, id1));
 }
 /* }}} */
 
@@ -270,6 +298,7 @@ const zend_function_entry shrike_functions[] = {
 	PHP_FE(shrike_pointer_sequence_end, NULL)
 	PHP_FE(shrike_record_alloc, arginfo_shrike_record_alloc)
 	PHP_FE(shrike_print_distance, arginfo_shrike_print_distance)
+	PHP_FE(shrike_get_distance, arginfo_shrike_get_distance)
 	PHP_FE_END	/* Must be the last line in shrike_functions[] */
 };
 /* }}} */
