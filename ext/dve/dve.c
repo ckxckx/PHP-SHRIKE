@@ -295,7 +295,7 @@ PHP_FUNCTION(dve_call_function_pointer)
 		RETURN_FALSE;
 	}
 
-	ptr = (FunctionPointer) (src + start_idx);
+	ptr = *((FunctionPointer*) (src + start_idx));
 	ptr();
 }
 /* }}} */
