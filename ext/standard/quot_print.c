@@ -145,15 +145,14 @@ PHPAPI zend_string *php_quot_print_decode(const unsigned char *str, size_t lengt
 
 #define PHP_QPRINT_MAXL 75
 
-PHPAPI zend_string *php_quot_print_encode(const unsigned char *str, size_t length) /* {{{ */
+PHPAPI unsigned char *php_quot_print_encode(const unsigned char *str, size_t length, size_t *ret_length) /* {{{ */
 {
-	zend_ulong lp = 0;
-	unsigned char c, *d;
+	unsigned long lp = 0;
+	unsigned char c, *ret, *d;
 	char *hex = "0123456789ABCDEF";
-	zend_string *ret;
 
-	ret = zend_string_safe_alloc(3, (length + (((3 * length)/(PHP_QPRINT_MAXL-9)) + 1)), 0, 0);
-	d = (unsigned char*)ZSTR_VAL(ret);
+	ret = safe_emalloc(1, 3 * length + 3 * (((3 * length)/PHP_QPRINT_MAXL) + 1), 0);
+	d = ret;
 
 	while (length--) {
 		if (((c = *str++) == '\015') && (*str == '\012') && length > 0) {
@@ -187,7 +186,9 @@ PHPAPI zend_string *php_quot_print_encode(const unsigned char *str, size_t lengt
 		}
 	}
 	*d = '\0';
-	ret = zend_string_truncate(ret, d - (unsigned char*)ZSTR_VAL(ret), 0);
+	*ret_length = d - ret;
+
+	ret = erealloc(ret, *ret_length + 1);
 	return ret;
 }
 /* }}} */
@@ -264,8 +265,9 @@ PHP_FUNCTION(quoted_printable_decode)
 /* {{{ proto string quoted_printable_encode(string str) */
 PHP_FUNCTION(quoted_printable_encode)
 {
-	zend_string *str;
-	zend_string *new_str;
+    zend_string *str;
+	char *new_str;
+	size_t new_str_len;
 
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "S", &str) != SUCCESS) {
 		return;
@@ -275,8 +277,8 @@ PHP_FUNCTION(quoted_printable_encode)
 		RETURN_EMPTY_STRING();
 	}
 
-	new_str = php_quot_print_encode((unsigned char *)ZSTR_VAL(str), ZSTR_LEN(str));
-	RETURN_STR(new_str);
+	new_str = (char *)php_quot_print_encode(ZSTR_VAL(str), ZSTR_LEN(str), &new_str_len);
+	RETURN_STRINGL(new_str, new_str_len);
 }
 /* }}} */
 
