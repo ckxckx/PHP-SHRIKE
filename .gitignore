@@ -1,4 +1,5 @@
-install/
+install
+install-asan
 install-debug
 install-asan-debug
 tags
