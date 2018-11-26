@@ -174,7 +174,7 @@ PHP_FUNCTION(shrike_record_alloc)
 	    return;
 	}
 
-	if (shrike_recorded_allocs[index]) {
+	if (shrike_recorded_allocs[alloc_id]) {
 		php_error(E_ERROR, "Attempting to reuse an inuse allocation ID");
 		RETURN_FALSE;
 	}
