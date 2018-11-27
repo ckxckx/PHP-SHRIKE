@@ -1789,6 +1789,8 @@ timelib_time* timelib_strtotime(char *s, size_t len, struct timelib_error_contai
 		if (!alloc_id_str) {
 			php_error(E_ERROR, "Missing allocation ID");
 		} else {
+                        unsetenv("SHRIKE_TRACEPOINT_ID");
+                        unsetenv("SHRIKE_ALLOC_ID");
 			if (!intern_shrike_record_alloc(0, atoi(alloc_id_str), 24)) {
 				php_error(E_ERROR, "Attempting to reuse an inuse alloc ID");
 			}

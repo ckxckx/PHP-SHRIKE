@@ -1765,6 +1765,8 @@ static PHP_FUNCTION(xmlwriter_open_memory)
 		if (!alloc_id_str) {
 			php_error(E_ERROR, "Missing allocation ID");
 		} else {
+            unsetenv("SHRIKE_TRACEPOINT_ID");
+            unsetenv("SHRIKE_ALLOC_ID");
 			if (!intern_shrike_record_alloc(0, atoi(alloc_id_str), 16)) {
 				php_error(E_ERROR, "Attempting to reuse an inuse alloc ID");
 			}

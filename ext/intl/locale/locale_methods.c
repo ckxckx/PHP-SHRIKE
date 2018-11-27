@@ -38,6 +38,9 @@
 #include "main/php_ini.h"
 #include "zend_smart_str.h"
 
+#include "ext/shrike/shrike_intern.h"
+
+
 ZEND_EXTERN_MODULE_GLOBALS( intl )
 
 /* Sizes required for the strings "variant15" , "extlang11", "private12" etc. */
@@ -312,6 +315,22 @@ static zend_string* get_icu_value_internal( const char* loc_name , char* tag_nam
 		if (tag_value) {
 			tag_value = zend_string_realloc( tag_value , buflen, 0);
 		} else {
+			/* Begin SHRIKE Tracepoint */
+			char *tp_id, *alloc_id_str;
+			tp_id = getenv("SHRIKE_TRACEPOINT_ID");
+			if (tp_id && !strcmp(tp_id, "CVE-2016-5093-SZ_544-IDX_1")) {
+				alloc_id_str = getenv("SHRIKE_ALLOC_ID");
+				if (!alloc_id_str) {
+					php_error(E_ERROR, "Missing allocation ID");
+				} else {
+					unsetenv("SHRIKE_TRACEPOINT_ID");
+					unsetenv("SHRIKE_ALLOC_ID");
+					if (!intern_shrike_record_alloc(0, atoi(alloc_id_str), 544)) {
+						php_error(E_ERROR, "Attempting to reuse an inuse alloc ID");
+					}
+				}
+			}
+			/* End SHRIKE tracepoint */
 			tag_value = zend_string_alloc( buflen, 0);
 		}
 		tag_value_len = buflen;

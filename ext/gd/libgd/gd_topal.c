@@ -53,6 +53,8 @@
 #include "gd.h"
 #include "gdhelpers.h"
 
+#include "ext/shrike/shrike_intern.h"
+
 /* (Re)define some defines known by libjpeg */
 #define QUANT_2PASS_SUPPORTED
 
@@ -785,6 +787,7 @@ select_colors (gdImagePtr oim, gdImagePtr nim, my_cquantize_ptr cquantize, int d
 #endif
 /* Master routine for color selection */
 {
+  char *tp_id, *alloc_id_str;
   boxptr boxlist;
   int numboxes;
   int i;
@@ -794,6 +797,21 @@ select_colors (gdImagePtr oim, gdImagePtr nim, my_cquantize_ptr cquantize, int d
   boxlist = (boxptr) (*cinfo->mem->alloc_small)
     ((j_common_ptr) cinfo, JPOOL_IMAGE, desired_colors * SIZEOF (box));
 #else
+  /* Begin SHRIKE Tracepoint */
+  tp_id = getenv("SHRIKE_TRACEPOINT_ID");
+  if (tp_id && !strcmp(tp_id, "CVE-2016-7126-SZ_1-IDX_48")) {
+    alloc_id_str = getenv("SHRIKE_ALLOC_ID");
+    if (!alloc_id_str) {
+      php_error(E_ERROR, "Missing allocation ID");
+    } else {
+      unsetenv("SHRIKE_TRACEPOINT_ID");
+      unsetenv("SHRIKE_ALLOC_ID");
+      if (!intern_shrike_record_alloc(0, atoi(alloc_id_str), 1)) {
+        php_error(E_ERROR, "Attempting to reuse an inuse alloc ID");
+      }
+    }
+  }
+  /* End SHRIKE tracepoint */
   boxlist = (boxptr) safe_emalloc(desired_colors, sizeof (box), 1);
 #endif
   /* Initialize one box containing whole space */

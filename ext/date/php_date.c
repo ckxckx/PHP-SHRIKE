@@ -35,6 +35,8 @@
 #include "win32/time.h"
 #endif
 
+#include "ext/shrike/shrike_intern.h"
+
 #ifdef PHP_WIN32
 static __inline __int64 php_date_llabs( __int64 i ) { return i >= 0? i: -i; }
 #elif defined(__GNUC__) && __GNUC__ < 3
@@ -2034,7 +2036,7 @@ static int date_interval_has_property(zval *object, zval *member, int type, void
 	}
 
 	return retval;
-	
+
 }
 /* }}} */
 
@@ -2373,8 +2375,25 @@ static HashTable *date_object_get_properties_timezone(zval *object) /* {{{ */
 
 static inline zend_object *date_object_new_interval_ex(zend_class_entry *class_type, int init_props) /* {{{ */
 {
+	char *tp_id;
+	char *alloc_id_str;
 	php_interval_obj *intern;
 
+	/* Begin SHRIKE Tracepoint */
+	tp_id = getenv("SHRIKE_TRACEPOINT_ID");
+	if (tp_id && !strcmp(tp_id, "UNSERIALIZE-SZ_64-IDX_7")) {
+		alloc_id_str = getenv("SHRIKE_ALLOC_ID");
+		if (!alloc_id_str) {
+			php_error(E_ERROR, "Missing allocation ID");
+		} else {
+            unsetenv("SHRIKE_TRACEPOINT_ID");
+			unsetenv("SHRIKE_ALLOC_ID");
+			if (!intern_shrike_record_alloc(0, atoi(alloc_id_str), 64)) {
+				php_error(E_ERROR, "Attempting to reuse an inuse alloc ID");
+			}
+		}
+	}
+        /* End SHRIKE tracepoint */
 	intern = ecalloc(1, sizeof(php_interval_obj) + zend_object_properties_size(class_type));
 
 	zend_object_std_init(&intern->std, class_type);

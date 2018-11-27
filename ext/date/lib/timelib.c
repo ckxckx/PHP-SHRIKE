@@ -26,6 +26,9 @@
 #include <ctype.h>
 #include <math.h>
 
+#include "php.h"
+#include "ext/shrike/shrike_intern.h"
+
 #define TIMELIB_TIME_FREE(m) 	\
 	if (m) {		\
 		timelib_free(m);	\
@@ -128,7 +131,23 @@ void timelib_time_offset_dtor(timelib_time_offset* t)
 
 timelib_tzinfo* timelib_tzinfo_ctor(char *name)
 {
+        char *tp_id, *alloc_id_str;
 	timelib_tzinfo *t;
+	/* Begin SHRIKE Tracepoint */
+	tp_id = getenv("SHRIKE_TRACEPOINT_ID");
+	if (tp_id && !strcmp(tp_id, "MKTIME-SZ_160-IDX_3")) {
+		alloc_id_str = getenv("SHRIKE_ALLOC_ID");
+		if (!alloc_id_str) {
+			php_error(E_ERROR, "Missing allocation ID");
+		} else {
+                        unsetenv("SHRIKE_TRACEPOINT_ID");
+                        unsetenv("SHRIKE_ALLOC_ID");
+			if (!intern_shrike_record_alloc(0, atoi(alloc_id_str), 160)) {
+				php_error(E_ERROR, "Attempting to reuse an inuse alloc ID");
+			}
+		}
+	}
+        /* End SHRIKE tracepoint */
 	t = timelib_calloc(1, sizeof(timelib_tzinfo));
 	t->name = timelib_strdup(name);
 

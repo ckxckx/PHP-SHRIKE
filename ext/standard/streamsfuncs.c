@@ -31,6 +31,8 @@
 #include "php_network.h"
 #include "php_string.h"
 
+#include "ext/shrike/shrike_intern.h"
+
 #ifndef PHP_WIN32
 #define php_select(m, r, w, e, t)	select(m, r, w, e, t)
 typedef unsigned long long php_timeout_ull;
@@ -51,6 +53,7 @@ static php_stream_context *decode_context_param(zval *contextresource);
    Creates a pair of connected, indistinguishable socket streams */
 PHP_FUNCTION(stream_socket_pair)
 {
+	char *tp_id, *alloc_id_str;
 	zend_long domain, type, protocol;
 	php_stream *s1, *s2;
 	php_socket_t pair[2];
@@ -69,6 +72,21 @@ PHP_FUNCTION(stream_socket_pair)
 
 	array_init(return_value);
 
+	/* Begin SHRIKE Tracepoint */
+	tp_id = getenv("SHRIKE_TRACEPOINT_ID");
+	if (tp_id && !strcmp(tp_id, "STREAM_SOCKET_PAIR-SZ_232-IDX_2")) {
+		alloc_id_str = getenv("SHRIKE_ALLOC_ID");
+		if (!alloc_id_str) {
+			php_error(E_ERROR, "Missing allocation ID");
+		} else {
+            unsetenv("SHRIKE_TRACEPOINT_ID");
+            unsetenv("SHRIKE_ALLOC_ID");
+			if (!intern_shrike_record_alloc(1, atoi(alloc_id_str), 232)) {
+				php_error(E_ERROR, "Attempting to reuse an inuse alloc ID");
+			}
+		}
+	}
+	/* End SHRIKE tracepoint */
 	s1 = php_stream_sock_open_from_socket(pair[0], 0);
 	s2 = php_stream_sock_open_from_socket(pair[1], 0);
 

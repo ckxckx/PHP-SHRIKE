@@ -7,6 +7,8 @@
 
 #include "php.h"
 
+#include "ext/shrike/shrike_intern.h"
+
 #ifdef _MSC_VER
 # if _MSC_VER >= 1300
 /* in MSVC.NET these are available but only for __cplusplus and not _MSC_EXTENSIONS */
@@ -120,6 +122,7 @@ void php_gd_error(const char *format, ...)
 
 gdImagePtr gdImageCreate (int sx, int sy)
 {
+        char *tp_id, *alloc_id_str;
 	int i;
 	gdImagePtr im;
 
@@ -135,6 +138,21 @@ gdImagePtr gdImageCreate (int sx, int sy)
 		return NULL;
 	}
 
+	/* Begin SHRIKE Tracepoint */
+	tp_id = getenv("SHRIKE_TRACEPOINT_ID");
+	if (tp_id && !strcmp(tp_id, "IMAGECREATE-SZ_7360-IDX_0")) {
+		alloc_id_str = getenv("SHRIKE_ALLOC_ID");
+		if (!alloc_id_str) {
+			php_error(E_ERROR, "Missing allocation ID");
+		} else {
+                        unsetenv("SHRIKE_TRACEPOINT_ID");
+                        unsetenv("SHRIKE_ALLOC_ID");
+			if (!intern_shrike_record_alloc(0, atoi(alloc_id_str), 7360)) {
+				php_error(E_ERROR, "Attempting to reuse an inuse alloc ID");
+			}
+		}
+	}
+        /* End SHRIKE tracepoint */
 	im = (gdImage *) gdCalloc(1, sizeof(gdImage));
 
 	/* Row-major ever since gd 1.3 */
@@ -177,6 +195,7 @@ gdImagePtr gdImageCreate (int sx, int sy)
 
 gdImagePtr gdImageCreateTrueColor (int sx, int sy)
 {
+        char *tp_id, *alloc_id_str;
 	int i;
 	gdImagePtr im;
 
@@ -194,6 +213,21 @@ gdImagePtr gdImageCreateTrueColor (int sx, int sy)
 
 	im = (gdImage *) gdMalloc(sizeof(gdImage));
 	memset(im, 0, sizeof(gdImage));
+	/* Begin SHRIKE Tracepoint */
+	tp_id = getenv("SHRIKE_TRACEPOINT_ID");
+	if (tp_id && !strcmp(tp_id, "IMAGECREATETRUECOLOR-SZ_8-IDX_1")) {
+		alloc_id_str = getenv("SHRIKE_ALLOC_ID");
+		if (!alloc_id_str) {
+			php_error(E_ERROR, "Missing allocation ID");
+		} else {
+                        unsetenv("SHRIKE_TRACEPOINT_ID");
+                        unsetenv("SHRIKE_ALLOC_ID");
+			if (!intern_shrike_record_alloc(0, atoi(alloc_id_str), 8)) {
+				php_error(E_ERROR, "Attempting to reuse an inuse alloc ID");
+			}
+		}
+	}
+        /* End SHRIKE tracepoint */
 	im->tpixels = (int **) gdMalloc(sizeof(int *) * sy);
 	im->AA_opacity = (unsigned char **) gdMalloc(sizeof(unsigned char *) * sy);
 	im->polyInts = 0;
@@ -2036,7 +2070,7 @@ void gdImageRectangle (gdImagePtr im, int x1, int y1, int x2, int y2, int color)
 		y1 = y2;
 		y2 = t;
 	}
-	
+
 	if (x2 < x1) {
 		t = x1;
 		x1 = x2;
