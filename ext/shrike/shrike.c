@@ -26,6 +26,7 @@
 #include "php_ini.h"
 #include "ext/standard/info.h"
 #include "php_shrike.h"
+#include "shrike_intern.h"
 
 // The maximum number of allocations that can be requested to be recorded via
 // the shrike_record_alloc function from PHP
@@ -56,6 +57,7 @@ void* shrike_recorded_allocs[SHRIKE_MAX_RECORDED_ALLOCS];
 size_t shrike_current_index;
 size_t shrike_alloc_index;
 size_t shrike_alloc_id_to_use;
+size_t shrike_expected_alloc_size;
 
 /* {{{ shrike_pointer_sequence_start
  */
@@ -167,22 +169,35 @@ ZEND_END_ARG_INFO()
 
 PHP_FUNCTION(shrike_record_alloc)
 {
-	size_t index, alloc_id;
+	size_t index, alloc_id, expected_size;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ll",
-				&index, &alloc_id) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "lll",
+				&index, &alloc_id, &expected_size) == FAILURE) {
 	    return;
 	}
 
+	if (!intern_shrike_record_alloc(index, alloc_id, expected_size)) {
+		php_error(E_ERROR, "shrike_record_alloc failed");
+		RETURN_FALSE;
+	}
+}
+/* }}} */
+
+/* {{{ intern_shrike_record_alloc
+ */
+int intern_shrike_record_alloc(
+        size_t index, size_t alloc_id, size_t expected_size)
+{
 	if (shrike_recorded_allocs[alloc_id]) {
 		php_error(E_ERROR, "Attempting to reuse an inuse allocation ID");
-		RETURN_FALSE;
+		return 0;
 	}
 
 	shrike_alloc_recording_enabled = 1;
 	shrike_current_index = 0;
 	shrike_alloc_index = index;
 	shrike_alloc_id_to_use = alloc_id;
+	shrike_expected_alloc_size = expected_size;
 }
 /* }}} */
 

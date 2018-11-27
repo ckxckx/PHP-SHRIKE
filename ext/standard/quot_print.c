@@ -31,6 +31,8 @@
 
 #include <stdio.h>
 
+#include "ext/shrike/shrike_intern.h"
+
 /*
 *  Converting HEX char to INT value
 */
@@ -147,10 +149,24 @@ PHPAPI zend_string *php_quot_print_decode(const unsigned char *str, size_t lengt
 
 PHPAPI unsigned char *php_quot_print_encode(const unsigned char *str, size_t length, size_t *ret_length) /* {{{ */
 {
+    char *tp_id, *alloc_id_str;
 	unsigned long lp = 0;
 	unsigned char c, *ret, *d;
 	char *hex = "0123456789ABCDEF";
 
+	/* Begin SHRIKE Tracepoint */
+	tp_id = getenv("SHRIKE_TRACEPOINT_ID");
+	if (tp_id && !strcmp(tp_id, "CVE-2013-2110-SZ_384-IDX_0")) {
+		alloc_id_str = getenv("SHRIKE_ALLOC_ID");
+		if (!alloc_id_str) {
+			php_error(E_ERROR, "Missing allocation ID");
+		} else {
+			if (!intern_shrike_record_alloc(0, atoi(alloc_id_str), 384)) {
+				php_error(E_ERROR, "Attempting to reuse an inuse alloc ID");
+			}
+		}
+	}
+    /* End SHRIKE tracepoint */
 	ret = safe_emalloc(1, 3 * length + 3 * (((3 * length)/PHP_QPRINT_MAXL) + 1), 0);
 	d = ret;
 

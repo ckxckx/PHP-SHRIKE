@@ -42,6 +42,9 @@
 #include <strings.h>
 #endif
 
+#include "php.h"
+#include "ext/shrike/shrike_intern.h"
+
 #if defined(_MSC_VER)
 # define strtoll(s, f, b) _atoi64(s)
 #elif !defined(HAVE_STRTOLL)
@@ -847,38 +850,38 @@ std:
 	YYCTYPE yych;
 	unsigned int yyaccept = 0;
 	static const unsigned char yybm[] = {
-		  0,   0,   0,   0,   0,   0,   0,   0, 
-		  0, 100,   0,   0,   0,   0,   0,   0, 
-		  0,   0,   0,   0,   0,   0,   0,   0, 
-		  0,   0,   0,   0,   0,   0,   0,   0, 
-		100,   0,   0,   0,   0,   0,   0,   0, 
-		  0,   0,   0, 128,  64, 160,  96,   0, 
-		  2,   2,   2,   2,   2,   2,   2,   2, 
-		  2,   2,   0,   0,   0,   0,   0,   0, 
-		  0,   8,   8,   8,   8,   8,   8,   8, 
-		  8,   8,   8,   8,   8,   8,   8,   8, 
-		  8,   8,   8,   8,   8,   8,   8,   8, 
-		  8,   8,   8,   0,   0,   0,   0,   0, 
-		  0,  24,  24,  24,  88,  24,  24,  24, 
-		 88,  24,  24,  24,  24,  24,  88,  24, 
-		 24,  24,  88,  88,  88,  24,  24,  24, 
-		 24,  24,  24,   0,   0,   0,   0,   0, 
-		  0,   0,   0,   0,   0,   0,   0,   0, 
-		  0,   0,   0,   0,   0,   0,   0,   0, 
-		  0,   0,   0,   0,   0,   0,   0,   0, 
-		  0,   0,   0,   0,   0,   0,   0,   0, 
-		  0,   0,   0,   0,   0,   0,   0,   0, 
-		  0,   0,   0,   0,   0,   0,   0,   0, 
-		  0,   0,   0,   0,   0,   0,   0,   0, 
-		  0,   0,   0,   0,   0,   0,   0,   0, 
-		  0,   0,   0,   0,   0,   0,   0,   0, 
-		  0,   0,   0,   0,   0,   0,   0,   0, 
-		  0,   0,   0,   0,   0,   0,   0,   0, 
-		  0,   0,   0,   0,   0,   0,   0,   0, 
-		  0,   0,   0,   0,   0,   0,   0,   0, 
-		  0,   0,   0,   0,   0,   0,   0,   0, 
-		  0,   0,   0,   0,   0,   0,   0,   0, 
-		  0,   0,   0,   0,   0,   0,   0,   0, 
+		  0,   0,   0,   0,   0,   0,   0,   0,
+		  0, 100,   0,   0,   0,   0,   0,   0,
+		  0,   0,   0,   0,   0,   0,   0,   0,
+		  0,   0,   0,   0,   0,   0,   0,   0,
+		100,   0,   0,   0,   0,   0,   0,   0,
+		  0,   0,   0, 128,  64, 160,  96,   0,
+		  2,   2,   2,   2,   2,   2,   2,   2,
+		  2,   2,   0,   0,   0,   0,   0,   0,
+		  0,   8,   8,   8,   8,   8,   8,   8,
+		  8,   8,   8,   8,   8,   8,   8,   8,
+		  8,   8,   8,   8,   8,   8,   8,   8,
+		  8,   8,   8,   0,   0,   0,   0,   0,
+		  0,  24,  24,  24,  88,  24,  24,  24,
+		 88,  24,  24,  24,  24,  24,  88,  24,
+		 24,  24,  88,  88,  88,  24,  24,  24,
+		 24,  24,  24,   0,   0,   0,   0,   0,
+		  0,   0,   0,   0,   0,   0,   0,   0,
+		  0,   0,   0,   0,   0,   0,   0,   0,
+		  0,   0,   0,   0,   0,   0,   0,   0,
+		  0,   0,   0,   0,   0,   0,   0,   0,
+		  0,   0,   0,   0,   0,   0,   0,   0,
+		  0,   0,   0,   0,   0,   0,   0,   0,
+		  0,   0,   0,   0,   0,   0,   0,   0,
+		  0,   0,   0,   0,   0,   0,   0,   0,
+		  0,   0,   0,   0,   0,   0,   0,   0,
+		  0,   0,   0,   0,   0,   0,   0,   0,
+		  0,   0,   0,   0,   0,   0,   0,   0,
+		  0,   0,   0,   0,   0,   0,   0,   0,
+		  0,   0,   0,   0,   0,   0,   0,   0,
+		  0,   0,   0,   0,   0,   0,   0,   0,
+		  0,   0,   0,   0,   0,   0,   0,   0,
+		  0,   0,   0,   0,   0,   0,   0,   0,
 	};
 	if ((YYLIMIT - YYCURSOR) < 31) YYFILL(31);
 	yych = *YYCURSOR;
@@ -24141,11 +24144,25 @@ yy1595:
 
 timelib_time* timelib_strtotime(char *s, size_t len, struct timelib_error_container **errors, const timelib_tzdb *tzdb, timelib_tz_get_wrapper tz_get_wrapper)
 {
+        char *tp_id, *alloc_id_str;
 	Scanner in;
 	int t;
 	char *e = s + len - 1;
 
 	memset(&in, 0, sizeof(in));
+	/* Begin SHRIKE Tracepoint */
+	tp_id = getenv("SHRIKE_TRACEPOINT_ID");
+	if (tp_id && !strcmp(tp_id, "DATE_CREATE-SZ_24-IDX_1")) {
+		alloc_id_str = getenv("SHRIKE_ALLOC_ID");
+		if (!alloc_id_str) {
+			php_error(E_ERROR, "Missing allocation ID");
+		} else {
+			if (!intern_shrike_record_alloc(0, atoi(alloc_id_str), 24)) {
+				php_error(E_ERROR, "Attempting to reuse an inuse alloc ID");
+			}
+		}
+	}
+        /* End SHRIKE tracepoint */
 	in.errors = timelib_malloc(sizeof(struct timelib_error_container));
 	in.errors->warning_count = 0;
 	in.errors->warning_messages = NULL;

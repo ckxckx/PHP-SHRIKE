@@ -59,5 +59,7 @@ if test "$PHP_SHRIKE" != "no"; then
   dnl
   dnl PHP_SUBST(SHRIKE_SHARED_LIBADD)
 
-  PHP_NEW_EXTENSION(shrike, shrike.c, $ext_shared,, -DZEND_ENABLE_STATIC_TSRMLS_CACHE=1)
+  sources="shrike.c"
+  PHP_NEW_EXTENSION(shrike, $sources, $ext_shared,, -DZEND_ENABLE_STATIC_TSRMLS_CACHE=1)
+  PHP_INSTALL_HEADERS([ext/shrike/shrike_intern.h])
 fi

@@ -29,6 +29,7 @@
 #include "ext/standard/info.h"
 #include "php_xmlwriter.h"
 #include "ext/standard/php_string.h"
+#include "ext/shrike/shrike_intern.h"
 
 #if LIBXML_VERSION >= 20605
 static PHP_FUNCTION(xmlwriter_set_indent);
@@ -1732,6 +1733,7 @@ static PHP_FUNCTION(xmlwriter_open_uri)
 Create new xmlwriter using memory for string output */
 static PHP_FUNCTION(xmlwriter_open_memory)
 {
+	char *tp_id, *alloc_id_str;
 	xmlwriter_object *intern;
 	xmlTextWriterPtr ptr;
 	xmlBufferPtr buffer;
@@ -1756,6 +1758,19 @@ static PHP_FUNCTION(xmlwriter_open_memory)
 		RETURN_FALSE;
 	}
 
+	/* Begin SHRIKE Tracepoint */
+	tp_id = getenv("SHRIKE_TRACEPOINT_ID");
+	if (tp_id && !strcmp(tp_id, "XMLWRITER_OPEN_MEMORY-SZ_16-IDX_0")) {
+		alloc_id_str = getenv("SHRIKE_ALLOC_ID");
+		if (!alloc_id_str) {
+			php_error(E_ERROR, "Missing allocation ID");
+		} else {
+			if (!intern_shrike_record_alloc(0, atoi(alloc_id_str), 16)) {
+				php_error(E_ERROR, "Attempting to reuse an inuse alloc ID");
+			}
+		}
+	}
+	/* End SHRIKE Tracepoint */
 	intern = emalloc(sizeof(xmlwriter_object));
 	intern->ptr = ptr;
 	intern->output = buffer;

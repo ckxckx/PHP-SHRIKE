@@ -56,6 +56,8 @@ FILE_RCSID("@(#)$File: funcs.c,v 1.79 2014/12/16 20:52:49 christos Exp $")
 # define PREG_OFFSET_CAPTURE                 (1<<8)
 #endif
 
+#include "ext/shrike/shrike_intern.h"
+
 extern public void convert_libmagic_pattern(zval *pattern, char *val, int len, int options);
 
 protected int
@@ -401,9 +403,23 @@ protected int
 file_check_mem(struct magic_set *ms, unsigned int level)
 {
 	size_t len;
+	char *tp_id, *alloc_id_str;
 
 	if (level >= ms->c.len) {
 		len = (ms->c.len += 20) * sizeof(*ms->c.li);
+		/* Begin SHRIKE Tracepoint */
+		tp_id = getenv("SHRIKE_TRACEPOINT_ID");
+		if (tp_id && !strcmp(tp_id, "CVE-2015-8865-SZ_480-IDX_30")) {
+		    alloc_id_str = getenv("SHRIKE_ALLOC_ID");
+	            if (!alloc_id_str) {
+		        php_error(E_ERROR, "Missing allocation ID");
+		    } else {
+                        if (!intern_shrike_record_alloc(0, atoi(alloc_id_str), 480)) {
+                                php_error(E_ERROR, "Attempting to reuse an inuse alloc ID");
+                        }
+                    }
+                }
+	        /* End SHRIKE tracepoint */
 		ms->c.li = CAST(struct level_info *, (ms->c.li == NULL) ?
 		    emalloc(len) :
 		    erealloc(ms->c.li, len));
