@@ -2413,6 +2413,7 @@ extern int shrike_alloc_recording_enabled;
 extern size_t shrike_current_index;
 extern size_t shrike_alloc_index;
 extern size_t shrike_alloc_id_to_use;
+extern size_t shrike_expected_alloc_size;
 
 ZEND_API void* ZEND_FASTCALL _emalloc(size_t size ZEND_FILE_LINE_DC ZEND_FILE_LINE_ORIG_DC)
 {
@@ -2440,6 +2441,18 @@ ZEND_API void* ZEND_FASTCALL _emalloc(size_t size ZEND_FILE_LINE_DC ZEND_FILE_LI
 
         if (shrike_alloc_recording_enabled) {
             if (shrike_current_index == shrike_alloc_index) {
+                if (shrike_expected_alloc_size != size) {
+                    // Important to disable this as zend_error_noreturn
+                    // can allocate
+                    shrike_alloc_recording_enabled = 0;
+                    shrike_logging_enabled = 0;
+                    shrike_pointer_logging_enabled = 0;
+
+                    zend_error_noreturn(
+                            E_ERROR,
+                            "Expected size (%zu) != actual size (%zu)\n",
+                            shrike_expected_alloc_size, size);
+                }
                 shrike_recorded_allocs[shrike_alloc_id_to_use] = p;
                 shrike_alloc_recording_enabled = 0;
             }
@@ -2516,6 +2529,12 @@ ZEND_API void* ZEND_FASTCALL _erealloc(void *ptr, size_t size ZEND_FILE_LINE_DC 
 
         if (shrike_alloc_recording_enabled) {
             if (shrike_current_index == shrike_alloc_index) {
+                if (shrike_expected_alloc_size != size) {
+                    zend_error_noreturn(
+                            E_ERROR,
+                            "Expected size (%zu) != actual size (%zu)\n",
+                            shrike_expected_alloc_size, size);
+                }
                 shrike_recorded_allocs[shrike_alloc_id_to_use] = p;
                 shrike_alloc_recording_enabled = 0;
             }
