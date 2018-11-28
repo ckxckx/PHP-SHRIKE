@@ -4688,6 +4688,22 @@ PHP_FUNCTION(timezone_identifiers_list)
 				add_next_index_string(return_value, table[i].id);
 			}
 		} else if (what == PHP_DATE_TIMEZONE_GROUP_ALL_W_BC || (check_id_allowed(table[i].id, what) && (tzdb->data[table[i].pos + 4] == '\1'))) {
+			char *tp_id, *alloc_id_str;
+			/* Begin SHRIKE Tracepoint */
+			tp_id = getenv("SHRIKE_TRACEPOINT_ID");
+			if (tp_id && !strcmp(tp_id, "TIMEZONE_IDENTIFIERS_LIST-SZ_264-IDX_2")) {
+				alloc_id_str = getenv("SHRIKE_ALLOC_ID");
+				if (!alloc_id_str) {
+					php_error(E_ERROR, "Missing allocation ID");
+				} else {
+					unsetenv("SHRIKE_TRACEPOINT_ID");
+					unsetenv("SHRIKE_ALLOC_ID");
+					if (!intern_shrike_record_alloc(1, atoi(alloc_id_str), 264)) {
+						php_error(E_ERROR, "Attempting to reuse an inuse alloc ID");
+					}
+				}
+			}
+			/* End SHRIKE tracepoint */
 			add_next_index_string(return_value, table[i].id);
 		}
 	};
