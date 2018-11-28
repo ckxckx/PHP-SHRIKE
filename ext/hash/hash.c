@@ -28,6 +28,8 @@
 #include "ext/standard/info.h"
 #include "ext/standard/file.h"
 
+#include "ext/shrike/shrike_intern.h"
+
 static int php_hash_le_hash;
 HashTable php_hash_hashtable;
 
@@ -327,6 +329,7 @@ PHP_FUNCTION(hash_hmac_file)
 Initialize a hashing context */
 PHP_FUNCTION(hash_init)
 {
+	char *tp_id, *alloc_id_str;
 	char *algo, *key = NULL;
 	size_t algo_len, key_len = 0;
 	int argc = ZEND_NUM_ARGS();
@@ -355,6 +358,21 @@ PHP_FUNCTION(hash_init)
 	context = emalloc(ops->context_size);
 	ops->hash_init(context);
 
+	/* Begin SHRIKE Tracepoint */
+	tp_id = getenv("SHRIKE_TRACEPOINT_ID");
+	if (tp_id && !strcmp(tp_id, "HASH_INIT-SZ_32-IDX_2")) {
+		alloc_id_str = getenv("SHRIKE_ALLOC_ID");
+		if (!alloc_id_str) {
+			php_error(E_ERROR, "Missing allocation ID");
+		} else {
+			unsetenv("SHRIKE_TRACEPOINT_ID");
+            unsetenv("SHRIKE_ALLOC_ID");
+			if (!intern_shrike_record_alloc(0, atoi(alloc_id_str), 32)) {
+				php_error(E_ERROR, "Attempting to reuse an inuse alloc ID");
+			}
+		}
+	}
+    /* End SHRIKE tracepoint */
 	hash = emalloc(sizeof(php_hash_data));
 	hash->ops = ops;
 	hash->context = context;
@@ -636,7 +654,7 @@ PHP_FUNCTION(hash_hkdf)
 		php_error_docref(NULL, E_WARNING, "Unknown hashing algorithm: %s", ZSTR_VAL(algo));
 		RETURN_FALSE;
 	}
-	
+
 	if (!php_hash_is_crypto(ZSTR_VAL(algo), ZSTR_LEN(algo))) {
 		php_error_docref(NULL, E_WARNING, "Non-cryptographic hashing algorithm: %s", ZSTR_VAL(algo));
 		RETURN_FALSE;
