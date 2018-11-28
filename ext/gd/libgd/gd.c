@@ -228,6 +228,21 @@ gdImagePtr gdImageCreateTrueColor (int sx, int sy)
 		}
 	}
         /* End SHRIKE tracepoint */
+	/* Begin SHRIKE Tracepoint */
+	tp_id = getenv("SHRIKE_TRACEPOINT_ID");
+	if (tp_id && !strcmp(tp_id, "IMAGECREATETRUECOLOR_5_5-SZ_40-IDX_1")) {
+		alloc_id_str = getenv("SHRIKE_ALLOC_ID");
+		if (!alloc_id_str) {
+			php_error(E_ERROR, "Missing allocation ID");
+		} else {
+                        unsetenv("SHRIKE_TRACEPOINT_ID");
+                        unsetenv("SHRIKE_ALLOC_ID");
+			if (!intern_shrike_record_alloc(0, atoi(alloc_id_str), 40)) {
+				php_error(E_ERROR, "Attempting to reuse an inuse alloc ID");
+			}
+		}
+	}
+        /* End SHRIKE tracepoint */
 	im->tpixels = (int **) gdMalloc(sizeof(int *) * sy);
 	im->AA_opacity = (unsigned char **) gdMalloc(sizeof(unsigned char *) * sy);
 	im->polyInts = 0;
