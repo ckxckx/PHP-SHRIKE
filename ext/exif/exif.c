@@ -40,6 +40,8 @@
 #include "php.h"
 #include "ext/standard/file.h"
 
+#include "ext/shrike/shrike_intern.h"
+
 #if HAVE_EXIF
 
 /* When EXIF_DEBUG is defined the module generates a lot of debug messages
@@ -1603,6 +1605,24 @@ static int exif_file_sections_add(image_info_type *ImageInfo, int type, size_t s
 	if (!size) {
 		data = NULL;
 	} else if (data == NULL) {
+        if (size == 4096) {
+            /* Begin SHRIKE Tracepoint */
+            char *tp_id, *alloc_id_str;
+            tp_id = getenv("SHRIKE_TRACEPOINT_ID");
+            if (tp_id && !strcmp(tp_id, "CVE-2018-10549-SZ_4096")) {
+                alloc_id_str = getenv("SHRIKE_ALLOC_ID");
+                if (!alloc_id_str) {
+                    php_error(E_ERROR, "Missing allocation ID");
+                } else {
+                    unsetenv("SHRIKE_TRACEPOINT_ID");
+                    unsetenv("SHRIKE_ALLOC_ID");
+                    if (!intern_shrike_record_alloc(0, atoi(alloc_id_str), 4096)) {
+                        php_error(E_ERROR, "Attempting to reuse an inuse alloc ID");
+                    }
+                }
+            }
+            /* End SHRIKE tracepoint */
+        }
 		data = safe_emalloc(size, 1, 0);
 	}
 	ImageInfo->file.list[count].type = type;
