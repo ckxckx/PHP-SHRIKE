@@ -245,6 +245,7 @@ PHP_FUNCTION(shrike_print_distance)
 	}
 	distance = get_distance(id0, id1);
 	printf("vtx distance %" PRId64 "\n", distance);
+	fflush(stdout);
 	RETURN_LONG(distance);
 }
 /* }}} */
