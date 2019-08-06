@@ -117,6 +117,24 @@ static zend_always_inline uint32_t zend_string_delref(zend_string *s)
 	return 1;
 }
 
+static zend_always_inline zend_string *zend_string_alloc_32(uint32_t len, int persistent)
+{
+	zend_string *ret = (zend_string *)pemalloc(ZEND_MM_ALIGNED_SIZE(_ZSTR_STRUCT_SIZE(len)) & 0xffffffff, persistent);
+
+	GC_REFCOUNT(ret) = 1;
+#if 1
+	/* optimized single assignment */
+	GC_TYPE_INFO(ret) = IS_STRING | ((persistent ? IS_STR_PERSISTENT : 0) << 8);
+#else
+	GC_TYPE(ret) = IS_STRING;
+	GC_FLAGS(ret) = (persistent ? IS_STR_PERSISTENT : 0);
+	GC_INFO(ret) = 0;
+#endif
+	zend_string_forget_hash_val(ret);
+	ZSTR_LEN(ret) = len;
+	return ret;
+}
+
 static zend_always_inline zend_string *zend_string_alloc(size_t len, int persistent)
 {
 	zend_string *ret = (zend_string *)pemalloc(ZEND_MM_ALIGNED_SIZE(_ZSTR_STRUCT_SIZE(len)), persistent);
