@@ -6,9 +6,9 @@ install_dir="$(pwd)/install"
 make clean
 
 ./configure --prefix="$install_dir" \
-    --enable-shrike --enable-dve --enable-mbstring --enable-intl \
+    --enable-zip --enable-shrike --enable-dve --enable-mbstring --enable-intl \
     --enable-exif --with-gd CXXFLAGS="-DU_USING_ICU_NAMESPACE=1 "\
-    CFLAGS="-DU_USING_ICU_NAMESPACE=1 -O0 -g"
+    CFLAGS="-DU_USING_ICU_NAMESPACE=1 -O2"
 
 make -j 5
 
