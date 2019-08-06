@@ -2415,6 +2415,13 @@ extern size_t shrike_alloc_index;
 extern size_t shrike_alloc_id_to_use;
 extern size_t shrike_expected_alloc_size;
 
+// Shapeshifter function pointers
+extern void *(*ssr_malloc)(size_t);
+extern void *(*ssr_calloc)(size_t, size_t);
+extern void *(*ssr_realloc)(void *, size_t);
+extern void (*ssr_free)(void *);
+
+
 ZEND_API void* ZEND_FASTCALL _emalloc(size_t size ZEND_FILE_LINE_DC ZEND_FILE_LINE_ORIG_DC)
 {
 
@@ -2427,6 +2434,13 @@ ZEND_API void* ZEND_FASTCALL _emalloc(size_t size ZEND_FILE_LINE_DC ZEND_FILE_LI
 		}
 	}
 #endif
+
+        // Check if we are running under shapeshifter, and if so redirect this call
+        char *use_ssr = getenv("SSR_ALLOCATOR_RUN_MODE");
+        if (use_ssr) {
+            return ssr_malloc(size);
+        }
+
         void *p = zend_mm_alloc_heap(AG(mm_heap), size ZEND_FILE_LINE_RELAY_CC ZEND_FILE_LINE_ORIG_RELAY_CC);
         if (shrike_logging_enabled || getenv("VTX_LOG")) {
             printf("vtx alloc %lu 0x%" PRIxPTR "\n", size, (uintptr_t) p);
@@ -2477,6 +2491,12 @@ ZEND_API void ZEND_FASTCALL _efree(void *ptr ZEND_FILE_LINE_DC ZEND_FILE_LINE_OR
 		return;
 	}
 #endif
+        // Check if we are running under shapeshifter, and if so redirect this call
+        char *use_ssr = getenv("SSR_ALLOCATOR_RUN_MODE");
+        if (use_ssr) {
+            return ssr_free(ptr);
+        }
+
         if (shrike_logging_enabled || getenv("VTX_LOG")) {
             printf("vtx free 0x%" PRIxPTR "\n", (uintptr_t) ptr);
         }
@@ -2504,6 +2524,13 @@ ZEND_API void* ZEND_FASTCALL _erealloc(void *ptr, size_t size ZEND_FILE_LINE_DC 
 			return AG(mm_heap)->custom_heap.std._realloc(ptr, size);
 		}
 	}
+
+        // Check if we are running under shapeshifter, and if so redirect this call
+        char *use_ssr = getenv("SSR_ALLOCATOR_RUN_MODE");
+        if (use_ssr) {
+            return ssr_realloc(ptr, size);
+        }
+
         void *p = zend_mm_realloc_heap(AG(mm_heap), ptr, size, size ZEND_FILE_LINE_RELAY_CC ZEND_FILE_LINE_ORIG_RELAY_CC);
         if (shrike_logging_enabled || getenv("VTX_LOG")) {
             printf("vtx realloc %lu 0x%" PRIxPTR " 0x%" PRIxPTR "\n", size, (uintptr_t) ptr, (uintptr_t) p);
@@ -2589,6 +2616,12 @@ ZEND_API void* ZEND_FASTCALL _safe_realloc(void *ptr, size_t nmemb, size_t size,
 
 ZEND_API void* ZEND_FASTCALL _ecalloc(size_t nmemb, size_t size ZEND_FILE_LINE_DC ZEND_FILE_LINE_ORIG_DC)
 {
+        // Check if we are running under shapeshifter, and if so redirect this call
+        char *use_ssr = getenv("SSR_ALLOCATOR_RUN_MODE");
+        if (use_ssr) {
+            return ssr_calloc(nmemb, size);
+        }
+
 	void *p;
         int tmp1 = shrike_logging_enabled;
         int tmp2 = shrike_pointer_logging_enabled;
