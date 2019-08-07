@@ -2416,11 +2416,10 @@ extern size_t shrike_alloc_id_to_use;
 extern size_t shrike_expected_alloc_size;
 
 // Shapeshifter function pointers
-extern void *(*ssr_malloc)(size_t);
-extern void *(*ssr_calloc)(size_t, size_t);
-extern void *(*ssr_realloc)(void *, size_t);
-extern void (*ssr_free)(void *);
-
+void* ssr_malloc(size_t);
+void* ssr_calloc(size_t, size_t);
+void* ssr_realloc(void *, size_t);
+void ssr_free(void *);
 
 ZEND_API void* ZEND_FASTCALL _emalloc(size_t size ZEND_FILE_LINE_DC ZEND_FILE_LINE_ORIG_DC)
 {
